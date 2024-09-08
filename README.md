@@ -35,5 +35,5 @@ I want to make this simulator as fast as possible using **parallelization & dist
 *  **Monte Carlo** simulation to get ideas of how likely a strategy will perform in the future
 *  **Sharpe Ratio** optimizer to get the optimal distribution of the weights in a portfolio
 *  Parallelization techniques to speed up computations
-*  Potentially Graphical User Interface to enable the end user defining one's own strategy to backtest in a more user friendly way than coding.
+*  Potentially Graphical User Interface to enable end users defining their own strategy to backtest in a more user friendly way than coding.
     -  Several Timeseries metrics have already been implemented like **RSI**, **Simple Moving Average (SMA)**, **Exponential Moving Average (EMA)**, **Maximum Drawdowns**, ...
