@@ -258,13 +258,13 @@ TEST(PortfolioBuilder, get_portfolio_values){
     ptf->buy(*yt1, 2.21, random_dates[0]);
 
     Timeseries expected = Timeseries(random_dates, {221.0, 221.0, 221.0, 198.9, 287.3, 176.8, 225.9283, 198.9221, 309.0685, 320.45});
-    Timeseries ptf_global_values = ptf->get_portfolio_values();
+    Timeseries ptf_global_values = ptf->get_ts_portfolio_values();
     ASSERT_EQ(ptf_global_values, expected);
 
     ptf->buy(*yt2, 1.0, random_dates[2]);
 
     expected = Timeseries(random_dates, {221.0, 221.0, 321.0, 288.9, 417.3, 256.8, 328.1583, 288.9321, 448.9185, 465.45});
-    ptf_global_values = ptf->get_portfolio_values();
+    ptf_global_values = ptf->get_ts_portfolio_values();
     ASSERT_EQ(ptf_global_values, expected);
 
     delete yt1;
@@ -298,12 +298,12 @@ TEST(PortfolioBuilder, get_ticker_values){
     ptf->buy(*yt1, 1.0, random_dates[2]);
 
     expected = Timeseries(random_dates, {221.0, 221.0, 321.0, 288.9, 417.3, 256.8, 328.1583, 288.9321, 448.9185, 465.45});
-    ticker_values = ptf->get_portfolio_values();
+    ticker_values = ptf->get_ts_portfolio_values();
     ASSERT_EQ(ticker_values, expected);
 
     ptf->sell(*yt1, 1.0, random_dates[9]);
     expected = Timeseries(random_dates, {221.0, 221.0, 321.0, 288.9, 417.3, 256.8, 328.1583, 288.9321, 448.9185, 320.45});
-    ticker_values = ptf->get_portfolio_values();
+    ticker_values = ptf->get_ts_portfolio_values();
     ASSERT_EQ(ticker_values, expected);
 
     delete yt1;
