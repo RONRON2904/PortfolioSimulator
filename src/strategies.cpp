@@ -130,7 +130,7 @@ void DCA::rebalance_portfolio(std::time_t date){
 
 void DCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_t date) {
     std::string ticker = ticker_yt.get_ticker();
-    std::vector<std::time_t> first_month_dates = this->tickers_last_month_dates[ticker];
+    std::vector<std::time_t> first_month_dates = this->tickers_first_month_dates[ticker];
     double alloc_pct = this->assets_desired_pct_allocations[ticker];
 
     double ticker_value = ticker_yt.get_closes().get_ts_value(date);

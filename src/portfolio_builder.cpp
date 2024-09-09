@@ -77,12 +77,12 @@ void PortfolioBuilder::save_portfolio(std::string filename) const{
     std::ofstream ptf_file("../strat_outputs/"+filename+".csv");
     double last_pls = 0.0;
     if (ptf_file.is_open()){
-        ptf_file << "Date;Value;P&L" << std::endl;
+        ptf_file << "Date;Value;P&L;Investments" << std::endl;
         for (const auto& pair: ptf_ts_values){
             if (ptf_pls_ts_values[pair.first] == 0)
-                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << last_pls << std::endl;
+                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << last_pls << ";" << pair.second - last_pls << std::endl;
             else
-                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << std::endl;
+                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << ";" << pair.second - ptf_pls_ts_values[pair.first] << std::endl;
             last_pls = ptf_pls_ts_values[pair.first];
         }
         ptf_file.close();
