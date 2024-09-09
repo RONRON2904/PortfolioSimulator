@@ -138,12 +138,14 @@ void DCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_t date) {
     double amount = this->recurrent_investment_amount + this->starting_amount;
     if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0){
         shares_amt = alloc_pct * amount / ticker_value;
-        this->ptf->buy(ticker_yt, shares_amt, date);
-        if (shares_amt > 0)
+        if (shares_amt > 0){
+            this->ptf->buy(ticker_yt, shares_amt, date);
             this->starting_amount = 0;
+        }
     }
 
     std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
+
     if (dividends.size() > 0 && dividends.find(date) != dividends.end()){
         shares_amt = 0.7 * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
         this->ptf->buy(ticker_yt, shares_amt, date);
@@ -162,7 +164,7 @@ void DCA::make_transactions(std::time_t date){
         this->last_rebalancing_nb_days++;
 }
 
-OptimizedDCA::OptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt, 
+SmaOptimizedDCA::SmaOptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt, 
                  double starting_amount,
                  double recurrent_investment_amount,
                  const std::map<std::string, double>& assets_desired_pct_allocations, 
@@ -178,7 +180,7 @@ OptimizedDCA::OptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt,
     }    
 }
 
-void OptimizedDCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_t date, const Timeseries& simple_moving_avergages){
+void SmaOptimizedDCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_t date, const Timeseries& simple_moving_avergages){
     std::string ticker = ticker_yt.get_ticker();
     double sma_value  = simple_moving_avergages.get_ts_value(date);
     double ticker_value =  ticker_yt.get_closes().get_ts_value(date);
@@ -188,6 +190,7 @@ void OptimizedDCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_
     double amount = this->recurrent_investment_amount + this->starting_amount;
     if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0){
         this->current_tickers_remaining_investment_amount[ticker] = this->assets_desired_pct_allocations.at(ticker) * amount;
+
         this->starting_amount = 0;
     }
     double shares_amt;
@@ -208,7 +211,7 @@ void OptimizedDCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_
     }
 }
 
-void OptimizedDCA::make_transactions(std::time_t date){
+void SmaOptimizedDCA::make_transactions(std::time_t date){
     for (const auto& ticker_yt: this->tickers_yt){
         make_transaction(ticker_yt, date, this->tickers_sma[ticker_yt.get_ticker()]);
     }

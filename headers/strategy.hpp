@@ -43,9 +43,9 @@ protected:
     std::map<std::string, std::vector<std::time_t>> tickers_last_month_dates;
 };
 
-class OptimizedDCA : public DCA {
+class SmaOptimizedDCA : public DCA {
 public:
-    OptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt,
+    SmaOptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt,
                  double starting_amount,
                  double recurrent_investment_amount,
                  const std::map<std::string, double>& assets_desired_pct_allocations, 
