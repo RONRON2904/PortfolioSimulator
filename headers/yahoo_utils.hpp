@@ -22,5 +22,6 @@ std::vector<std::time_t> extract_first_dates_of_each_month(const std::vector<std
 std::vector<std::time_t> extract_last_dates_of_each_month(const std::vector<std::time_t>& dates);
 bool almost_equal(double a, double b, double epsilon);
 bool vectors_almost_equal(const std::vector<double>& v1, const std::vector<double>& v2, double epsilon);
+double get_standard_deviation(const std::vector<double>& values);
 
 #endif

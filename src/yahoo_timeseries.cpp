@@ -56,6 +56,13 @@ double Timeseries::get_ts_value(std::time_t date) const{
     return ts_value;
 }
 
+double Timeseries::get_mean_returns() const {
+    std::vector<double> pct_changes = this->get_pct_changes();
+    if (pct_changes.size() == 0)
+        return 0.0;
+    return std::accumulate(pct_changes.begin(), pct_changes.end(), 0.0) / pct_changes.size();
+}
+
 std::vector<double> Timeseries::get_simple_moving_averages(size_t window_size) const{
     assert(this->values.size() >= window_size && "Error: Window size can't exceed the timeseries size\n");
     std::vector<double> averages(this->values.size() - window_size + 1);
@@ -191,7 +198,7 @@ std::vector<double> Timeseries::get_volatilities(size_t window_size) const{
         for (size_t j=0; j<window_size; ++j){
             sum_squared_diff += (this->values[i + j] - smas[i]) * (this->values[i + j] - smas[i]);
         }
-        volatilities[i] = std::sqrt(sum_squared_diff / window_size);
+        volatilities[i] = std::sqrt(sum_squared_diff / (window_size - 1));
     }
     return volatilities;
 }

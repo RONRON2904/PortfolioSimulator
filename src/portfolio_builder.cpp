@@ -46,6 +46,10 @@ void PortfolioBuilder::buy(const YahooTimeseries& ticker_yt, double shares_amt, 
         asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second + shares_amt;
         asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second + expense;
     }
+    if (this->portfolio_total_shares.empty())
+        this->portfolio_total_shares[date] = shares_amt;
+    else
+        this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second + shares_amt;
 }
 
 void PortfolioBuilder::sell(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date){
@@ -54,9 +58,11 @@ void PortfolioBuilder::sell(const YahooTimeseries& ticker_yt, double shares_amt,
         double available_shares = asset->historical_cumulative_ticker_shares.rbegin()->second;
         double expense = shares_amt * ticker_yt.get_closes().get_ts_value(date);
         this->historical_cash_flow[date] += expense;
+        this->portfolio_total_shares[date] -= shares_amt;
         if (shares_amt <= available_shares){
             asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second - shares_amt;
             asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second - expense;
+            this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second - shares_amt;
         } 
         else
             fprintf(stderr, "not enough shares available to sell this volume of shares\n");
@@ -65,9 +71,14 @@ void PortfolioBuilder::sell(const YahooTimeseries& ticker_yt, double shares_amt,
         fprintf(stderr, "ticker not in portfolio\n");
 }
 
-void PortfolioBuilder::set_portfolio_values(){
+void PortfolioBuilder::set_portfolio_values_and_prices(){
     std::map<std::time_t, double> ptf_values = this->get_ts_portfolio_values().get_ts_values();
     this->portfolio_values = ptf_values;
+
+    for (const auto& pair: ptf_values){
+        double total_shares = this->get_portfolio_total_shares(pair.first);
+        this->portfolio_prices[pair.first] = ptf_values[pair.first] / total_shares;
+    }
 }
 
 void PortfolioBuilder::save_portfolio(std::string filename) const{
@@ -168,6 +179,25 @@ double PortfolioBuilder::get_portfolio_value(std::time_t date) const{
     return global_value;
 }
 
+double PortfolioBuilder::get_portfolio_total_shares(std::time_t date) const{
+    double total_shares = 0.0;
+    try {
+        total_shares = this->portfolio_total_shares.at(date);
+    } catch (const std::out_of_range& e) {
+        //std::cerr << "Ticker Shares Exception: " << e.what() << " TICKER: " << ticker << " DATE: " << unix_timestamp_to_date_string(date) << std::endl;
+        auto it = this->portfolio_total_shares.lower_bound(date);
+        
+        if (it == this->portfolio_total_shares.begin() && it->first > date)
+            return 0.0;
+        if (it != this->portfolio_total_shares.begin()) {
+            --it;
+        }
+        total_shares = it->second;
+    }
+
+    return total_shares;
+}
+
 std::map<std::string, double> PortfolioBuilder::get_portfolio_percentage_allocations(std::time_t date) const{
     std::map<std::string, double> assets_pct_value_map;
     if (this->assets.empty())
@@ -222,6 +252,10 @@ Timeseries PortfolioBuilder::get_ts_portfolio_values() const{
     return Timeseries(ptf_dates, ptf_values);
 }
 
+Timeseries PortfolioBuilder::get_ts_portfolio_prices() const{
+    return Timeseries(this->portfolio_prices);
+}
+
 Timeseries PortfolioBuilder::get_ticker_profits_and_losses(std::string ticker) const{
     const struct AssetHolding* asset = this->get_asset(ticker);
     if (asset == nullptr)
@@ -266,6 +300,6 @@ Timeseries PortfolioBuilder::get_portfolio_profits_and_losses() const{
 }
 
 PortfolioBuilder::PortfolioBuilder()
-: assets({}){}
+: assets({}), portfolio_total_shares({}){}
 
 PortfolioBuilder::~PortfolioBuilder(){}

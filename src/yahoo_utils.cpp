@@ -241,3 +241,13 @@ bool vectors_almost_equal(const std::vector<double>& v1, const std::vector<doubl
     }
     return true;
 }
+
+double get_standard_deviation(const std::vector<double>& values){
+    double mean =  std::accumulate(values.begin(), values.end(), 0.0) / values.size();
+    double variance = 0.0;
+    for (double value : values) {
+        variance += (value - mean) * (value - mean);
+    }
+    variance /= values.size();
+    return std::sqrt(variance);
+}

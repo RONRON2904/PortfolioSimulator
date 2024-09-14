@@ -3,7 +3,9 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #include <limits>
+#include <random>
 
 Strategy::Strategy(const std::vector<YahooTimeseries>& tickers_yt, std::string strategy_name) : tickers_yt(tickers_yt), 
                                                                                                 strategy_name(strategy_name){
@@ -15,7 +17,11 @@ void Strategy::run_strategy(){
     std::vector<std::time_t> dates = get_unique_dates(this->tickers_yt);
     for (const auto& date: dates)
         this->make_transactions(date);
-    this->ptf->set_portfolio_values();
+    this->ptf->set_portfolio_values_and_prices();
+}
+
+const std::map<std::time_t, double> Strategy::get_strategy_values() const{
+    return this->ptf->get_portfolio_values();
 }
 
 double Strategy::get_strategy_total_returns() const{
@@ -72,6 +78,24 @@ void Strategy::save_end_portfolio(){
     double xirr = 100 * this->get_strategy_extended_internal_return_rate(1e-3, 1000);
     double ptf_end_value = this->ptf->get_portfolio_values().rbegin()->second;
     std::cout << "Strategy "+ this->strategy_name+" Total Returns: " << std::ceil(tr * 100.0) / 100.0 << "% - Internal Rate of Return: " << std::ceil(xirr * 100.0) / 100.0 << "%" << " Portfolio End Value: " << ptf_end_value << std::endl;
+}
+
+const YahooTimeseries Strategy::montecarlo_simulation(const std::vector<std::time_t>& future_dates){
+    Timeseries portfolio_prices = this->ptf->get_ts_portfolio_prices();
+    std::vector<double> pct_changes = portfolio_prices.get_pct_changes();
+    double ptf_mean_return = std::accumulate(pct_changes.begin(), pct_changes.end(), 0.0) / pct_changes.size();
+    double ptf_volatility = get_standard_deviation(pct_changes);
+    
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::normal_distribution<double> normal_dist(ptf_mean_return, ptf_volatility);
+
+    std::vector<double> future_prices(future_dates.size());
+    future_prices[0] = portfolio_prices.get_ts_values().rbegin()->second;
+    for (size_t i=1; i < future_dates.size(); ++i){
+        future_prices[i] = future_prices[i-1] + (future_prices[i-1] * normal_dist(generator));
+    }
+    return YahooTimeseries("MonteCarloSimulationTicker", future_dates, future_prices, future_prices, future_prices, future_prices, future_prices);
 }
 
 Strategy::~Strategy(){
@@ -163,6 +187,34 @@ void DCA::make_transactions(std::time_t date){
     else
         this->last_rebalancing_nb_days++;
 }
+
+
+void DCA::run_montecarlo_simulations(size_t nb_simu){
+    std::time_t currentTime = std::time(nullptr); // get current date
+    std::tm* tm_start = std::localtime(&currentTime);
+    std::tm tm_end = *tm_start;
+    // Add 20 years to the current year
+    tm_end.tm_year += 20;
+
+    std::time_t start = std::mktime(tm_start);
+    std::time_t end = std::mktime(&tm_end);
+    size_t count = 1 + 252 * 20;
+    std::vector<std::time_t> future_dates = generate_random_dates(count, start, end);
+    for (size_t i=0; i<nb_simu; ++i){
+        const YahooTimeseries yt = this->montecarlo_simulation(future_dates);
+        Strategy* strat = new DCA({yt}, 
+                                  this->starting_amount, 
+                                  this->recurrent_investment_amount,  
+                                  {{"MonteCarloSimulationTicker", 1.0}}, 
+                                  this->rebalancing_threshold, 
+                                  this->rebalancing_freq, 
+                                  this->strategy_name+ "_MonteCarloSimu_n" + std::to_string(i+1));
+        strat->run_strategy();
+        strat->save_end_portfolio();
+        delete strat;
+    }
+}
+
 
 SmaOptimizedDCA::SmaOptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt, 
                  double starting_amount,

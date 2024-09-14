@@ -81,6 +81,7 @@
         "locale": "cpp",
         "complex": "cpp",
         "unordered_set": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "list": "cpp"
     }
 }

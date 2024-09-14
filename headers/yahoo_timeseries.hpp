@@ -15,6 +15,7 @@ public:
     
     std::map<std::time_t, double> get_ts_values() const;
     double get_ts_value(std::time_t date) const;
+    double get_mean_returns() const;
 
     std::vector<double> get_simple_moving_averages(size_t window_size) const;
     std::vector<double> pget_simple_moving_averages(size_t window_size) const; // Parallel Algorithm Version
