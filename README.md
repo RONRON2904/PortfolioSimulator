@@ -24,6 +24,12 @@ I want to make this simulator as fast as possible using **parallelization & dist
    * each row contains three information : Date, Portfolio Value & **Profit & Losses**
 - Each strategy will display its **Total Return** (TR) (%) and its **Internal Rate of Return** (IRR) (%)
 
+##### 4- Monte Carlo Simulations
+-  End users can perform monte carlo simulations to simulate what their strategies could yield in the future
+-  A python script is available to plot these simulations
+  
+![image](https://github.com/user-attachments/assets/87c404f1-9353-4dca-95c5-4e25430e7f07)
+
 
 ### To compile : 
 *  in the src/ folder : g++ *.cpp -g -o main -lcurl
@@ -32,7 +38,6 @@ I want to make this simulator as fast as possible using **parallelization & dist
 
 
 ### To come:
-*  **Monte Carlo** simulation to get ideas of how likely a strategy will perform in the future
 *  **Sharpe Ratio** optimizer to get the optimal distribution of the weights in a portfolio
 *  Parallelization techniques to speed up computations
 *  Potentially Graphical User Interface to enable end users defining their own strategy to backtest in a more user friendly way than coding.
