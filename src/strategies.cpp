@@ -115,7 +115,8 @@ DCA::DCA(const std::vector<YahooTimeseries>& tickers_yt,
                                                         recurrent_investment_amount(recurrent_investment_amount),
                                                         assets_desired_pct_allocations(assets_desired_pct_allocations),
                                                         rebalancing_freq(rebalancing_freq),
-                                                        rebalancing_threshold(rebalancing_threshold){
+                                                        rebalancing_threshold(rebalancing_threshold),
+                                                        last_rebalancing_nb_days(0){
     std::vector<std::string> tickers;
     for (auto& ticker_yt: tickers_yt){
         std::string ticker = ticker_yt.get_ticker();
@@ -128,10 +129,10 @@ DCA::DCA(const std::vector<YahooTimeseries>& tickers_yt,
         assert(std::find(tickers.begin(), tickers.end(), pair.first) != tickers.end() && "pct allocation ticker name not in the passed YahooTimeries tickers list\n");
         assert(pair.second > 0 && "Each percentage allocation must be > 0!\n");
         sum += pair.second;
+        this->assets_starting_amounts[pair.first] = assets_desired_pct_allocations.at(pair.first) * starting_amount;
     }
 
     assert(std::fabs(sum - 1.0) < 1e-9 && "The sum of percentages is not equal to 1!\n");
-    this->last_rebalancing_nb_days = 0;
 }
 
 void DCA::rebalance_portfolio(std::time_t date){
@@ -159,13 +160,16 @@ void DCA::make_transaction(const YahooTimeseries& ticker_yt, std::time_t date) {
 
     double ticker_value = ticker_yt.get_closes().get_ts_value(date);
     double shares_amt = 0.0;
-    double amount = this->recurrent_investment_amount + this->starting_amount;
+    double amount = alloc_pct * this->recurrent_investment_amount;
+    
     if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0){
-        shares_amt = alloc_pct * amount / ticker_value;
-        if (shares_amt > 0){
-            this->ptf->buy(ticker_yt, shares_amt, date);
-            this->starting_amount = 0;
+        if (this->assets_starting_amounts[ticker] > 0){
+            amount += this->assets_starting_amounts[ticker];
+            this->assets_starting_amounts[ticker] = 0;
         }
+        shares_amt = amount / ticker_value;
+        if (shares_amt > 0)
+            this->ptf->buy(ticker_yt, shares_amt, date);
     }
 
     std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
@@ -239,11 +243,15 @@ void SmaOptimizedDCA::make_transaction(const YahooTimeseries& ticker_yt, std::ti
    
     std::vector<std::time_t> first_month_dates = this->tickers_first_month_dates[ticker];
     std::vector<std::time_t> last_month_dates = this->tickers_last_month_dates[ticker];
-    double amount = this->recurrent_investment_amount + this->starting_amount;
+    double ticker_alloc = this->assets_desired_pct_allocations.at(ticker);
+    double amount = ticker_alloc * this->recurrent_investment_amount;
+    
     if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0){
-        this->current_tickers_remaining_investment_amount[ticker] = this->assets_desired_pct_allocations.at(ticker) * amount;
-
-        this->starting_amount = 0;
+        if (this->assets_starting_amounts[ticker] > 0){
+            amount += this->assets_starting_amounts[ticker];
+            this->assets_starting_amounts[ticker] = 0;
+        }
+        this->current_tickers_remaining_investment_amount[ticker] = amount;
     }
     double shares_amt;
     if (sma_value > 0.0 && (sma_value - ticker_value) / sma_value > 0.07){

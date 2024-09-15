@@ -41,6 +41,7 @@ protected:
     double starting_amount;
     double recurrent_investment_amount;
     std::map<std::string, double> assets_desired_pct_allocations;
+    std::map<std::string, double> assets_starting_amounts;
     double rebalancing_threshold;
     int rebalancing_freq;
     int last_rebalancing_nb_days;

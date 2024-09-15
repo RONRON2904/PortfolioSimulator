@@ -58,7 +58,6 @@ void PortfolioBuilder::sell(const YahooTimeseries& ticker_yt, double shares_amt,
         double available_shares = asset->historical_cumulative_ticker_shares.rbegin()->second;
         double expense = shares_amt * ticker_yt.get_closes().get_ts_value(date);
         this->historical_cash_flow[date] += expense;
-        this->portfolio_total_shares[date] -= shares_amt;
         if (shares_amt <= available_shares){
             asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second - shares_amt;
             asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second - expense;
@@ -119,7 +118,6 @@ double PortfolioBuilder::get_ticker_value(std::string ticker, std::time_t date) 
             --it;
         ticker_shares = it->second;
     }
-
     return ticker_shares * asset->ticker_yt.get_closes().get_ts_value(date);
 }
 
@@ -272,8 +270,6 @@ Timeseries PortfolioBuilder::get_ticker_profits_and_losses(std::string ticker) c
     double close_value;
 
     for (const auto& dt : ticker_dates){ 
-        //if (ticker_values[dt] - this->get_ticker_expenses_value(ticker, dt) == 0)
-        //td::cout << unix_timestamp_to_date_string(dt) << " TICKER VALUE: " << ticker_values[dt] << " TICKER EXPENSE VALUE: " << this->get_ticker_expenses_value(ticker, dt) << std::endl;
         ticker_pl_values.push_back(ticker_values[dt] - this->get_ticker_expenses_value(ticker, dt));
         dates.push_back(dt);
     }
