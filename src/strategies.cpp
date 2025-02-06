@@ -6,6 +6,7 @@
 #include <numeric>
 #include <limits>
 #include <random>
+#include <omp.h>
 
 Strategy::Strategy(const std::vector<YahooTimeseries>& tickers_yt, std::string strategy_name) : tickers_yt(tickers_yt), 
                                                                                                 strategy_name(strategy_name){
@@ -204,6 +205,7 @@ void DCA::run_montecarlo_simulations(size_t nb_simu){
     std::time_t end = std::mktime(&tm_end);
     size_t count = 1 + 252 * 20;
     std::vector<std::time_t> future_dates = generate_random_dates(count, start, end);
+    #pragma omp parallel for num_threads(6)
     for (size_t i=0; i<nb_simu; ++i){
         const YahooTimeseries yt = this->montecarlo_simulation(future_dates);
         Strategy* strat = new DCA({yt}, 

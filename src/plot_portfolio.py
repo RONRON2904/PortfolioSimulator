@@ -32,6 +32,6 @@ def plot_strategy_df(filepath):
     plt.show()
     
 if __name__ == '__main__':
-    stratname = 'DCA_SPGold'
+    stratname = 'LumpSum_SPGold'
     plot_montecarlo_simu_df(stratname)
-    plot_strategy_df('../strat_outputs/DCA_SPGold_acc_2015_2024.csv')
+    plot_strategy_df('../strat_outputs/LumpSum_SPGold_acc_2015_2025.csv')

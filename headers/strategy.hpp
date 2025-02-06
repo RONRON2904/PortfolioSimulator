@@ -3,6 +3,13 @@
 
 #include "./portfolio_builder.hpp"
 
+struct StrategyGeneralParameters {
+    const std::vector<YahooTimeseries>& tickers_yt;
+    const std::string strategy_name, start_date, end_date, ts_granularity;
+    const double starting_amount, recurrent_investment_amount, fees_per_trade;
+    const std::map<std::string, double>& assets_desired_pct_allocations;
+};
+
 class Strategy {
 public:
     explicit Strategy(const std::vector<YahooTimeseries>& tickers_yt, std::string strategy_name);
