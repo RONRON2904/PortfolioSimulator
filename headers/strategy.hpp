@@ -2,17 +2,37 @@
 #define STRATEGY_HPP
 
 #include "./portfolio_builder.hpp"
+#include "./strategy_config.hpp"
 
-struct StrategyGeneralParameters {
-    const std::vector<YahooTimeseries>& tickers_yt;
-    const std::string strategy_name, start_date, end_date, ts_granularity;
-    const double starting_amount, recurrent_investment_amount, fees_per_trade;
-    const std::map<std::string, double>& assets_desired_pct_allocations;
+class CustomStrategy
+{
+public:
+    explicit CustomStrategy(const StrategyConfig &config);
+    void make_transactions(std::time_t date);
+    void run_strategy();
+
+    const std::map<std::time_t, double> get_strategy_values() const;
+    double get_strategy_total_returns() const;
+    double get_strategy_extended_internal_return_rate(double tolerance, int max_iterations) const;
+    void save_end_portfolio();
+
+    const YahooTimeseries montecarlo_simulation(const std::vector<std::time_t> &future_dates);
+    void run_montecarlo_simulations(size_t nb_simu);
+    ~CustomStrategy();
+
+private:
+    PortfolioBuilder *ptf;
+    const StrategyConfig &config;
+
+    void handle_recurrent_investment_paramters();
+    void apply_technical_indicators();
+    void handle_risk_parameters();
 };
 
-class Strategy {
+class Strategy
+{
 public:
-    explicit Strategy(const std::vector<YahooTimeseries>& tickers_yt, std::string strategy_name);
+    explicit Strategy(const std::vector<YahooTimeseries> &tickers_yt, std::string strategy_name);
     virtual void make_transactions(std::time_t date) = 0;
     virtual void run_strategy();
 
@@ -21,26 +41,28 @@ public:
     virtual double get_strategy_extended_internal_return_rate(double tolerance, int max_iterations) const;
     virtual void save_end_portfolio();
 
-    virtual const YahooTimeseries montecarlo_simulation(const std::vector<std::time_t>& future_dates);
+    virtual const YahooTimeseries montecarlo_simulation(const std::vector<std::time_t> &future_dates);
     virtual void run_montecarlo_simulations(size_t nb_simu) = 0;
     virtual ~Strategy();
+
 protected:
     std::string strategy_name;
     std::vector<YahooTimeseries> tickers_yt;
-    PortfolioBuilder* ptf;
+    PortfolioBuilder *ptf;
 };
 
-class DCA : public Strategy {
+class DCA : public Strategy
+{
 public:
-    DCA(const std::vector<YahooTimeseries>& tickers_yt,
+    DCA(const std::vector<YahooTimeseries> &tickers_yt,
         double starting_amount,
-        double recurrent_investment_amount, 
-        const std::map<std::string, double>& assets_desired_pct_allocations, 
+        double recurrent_investment_amount,
+        const std::map<std::string, double> &assets_desired_pct_allocations,
         int rebalancing_freq,
         double rebalancing_threshold,
         std::string strategy_name);
     void rebalance_portfolio(std::time_t date);
-    void make_transaction(const YahooTimeseries& ticker_yt, std::time_t date);
+    void make_transaction(const YahooTimeseries &ticker_yt, std::time_t date);
     virtual void make_transactions(std::time_t date) override;
     virtual void run_montecarlo_simulations(size_t nb_simu) override;
 
@@ -56,35 +78,37 @@ protected:
     std::map<std::string, std::vector<std::time_t>> tickers_last_month_dates;
 };
 
-class SmaOptimizedDCA : public DCA {
+class SmaOptimizedDCA : public DCA
+{
 public:
-    SmaOptimizedDCA(const std::vector<YahooTimeseries>& tickers_yt,
-                 double starting_amount,
-                 double recurrent_investment_amount,
-                 const std::map<std::string, double>& assets_desired_pct_allocations, 
-                 int rebalancing_freq,
-                 double rebalancing_threshold,
-                 int sma_window_size,
-                 std::string strategy_name);
-    void make_transaction(const YahooTimeseries& ticker_yt, std::time_t date, const Timeseries& simple_moving_avergages);
+    SmaOptimizedDCA(const std::vector<YahooTimeseries> &tickers_yt,
+                    double starting_amount,
+                    double recurrent_investment_amount,
+                    const std::map<std::string, double> &assets_desired_pct_allocations,
+                    int rebalancing_freq,
+                    double rebalancing_threshold,
+                    int sma_window_size,
+                    std::string strategy_name);
+    void make_transaction(const YahooTimeseries &ticker_yt, std::time_t date, const Timeseries &simple_moving_avergages);
     virtual void make_transactions(std::time_t date) override;
 
 private:
     std::map<std::string, double> current_tickers_remaining_investment_amount;
     std::map<std::string, std::vector<std::time_t>> tickers_last_month_dates;
-    std::map<std::string, Timeseries> tickers_sma; 
+    std::map<std::string, Timeseries> tickers_sma;
 };
 
-class LumpSum : public Strategy {
+class LumpSum : public Strategy
+{
 public:
-    LumpSum(const std::vector<YahooTimeseries>& tickers_yt, 
-            double initial_investment_amount, 
-            const std::map<std::string, double>& assets_desired_pct_allocations, 
+    LumpSum(const std::vector<YahooTimeseries> &tickers_yt,
+            double initial_investment_amount,
+            const std::map<std::string, double> &assets_desired_pct_allocations,
             int rebalancing_freq,
             double rebalancing_threshold,
             std::string strategy_name);
     void rebalance_portfolio(std::time_t date);
-    void make_transaction(const YahooTimeseries& ticker_yt, std::time_t date);
+    void make_transaction(const YahooTimeseries &ticker_yt, std::time_t date);
     void make_transactions(std::time_t date) override;
 
 private:
@@ -95,4 +119,5 @@ private:
     int last_rebalancing_nb_days;
     std::map<std::string, std::time_t> tickers_first_date;
 };
+
 #endif
