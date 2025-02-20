@@ -36,27 +36,44 @@ std::vector<std::time_t> PortfolioBuilder::get_unique_portfolio_dates() const
     return dates;
 }
 
+void PortfolioBuilder::deposit(double cash_amt, std::time_t date)
+{
+    if (this->historical_cash.empty())
+        this->historical_cash = {{date, cash_amt}};
+    else
+        this->historical_cash[date] = this->historical_cash.rbegin()->second + cash_amt;
+}
+
 void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, std::time_t date)
 {
     struct AssetHolding *asset = this->get_asset(ticker_yt.get_ticker());
     double expense = shares_amt * ticker_yt.get_closes().get_ts_value(date);
-    this->historical_cash_flow[date] -= expense;
-    if (asset == nullptr)
+    if (expense <= this->get_cash_amount(date))
     {
-        std::map<std::time_t, double> historical_cumulative_ticker_shares = {{date, shares_amt}};
-        std::map<std::time_t, double> historical_cumulative_ticker_expenses = {{date, expense}};
-        struct AssetHolding new_asset = {ticker_yt, historical_cumulative_ticker_shares, historical_cumulative_ticker_expenses};
-        this->assets.emplace_back(new_asset);
+        this->historical_cash_flow[date] -= expense;
+        if (asset == nullptr)
+        {
+            std::map<std::time_t, double> historical_cumulative_ticker_shares = {{date, shares_amt}};
+            std::map<std::time_t, double> historical_cumulative_ticker_expenses = {{date, expense}};
+            struct AssetHolding new_asset = {ticker_yt, historical_cumulative_ticker_shares, historical_cumulative_ticker_expenses};
+            this->assets.emplace_back(new_asset);
+        }
+        else
+        {
+            asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second + shares_amt;
+            asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second + expense;
+        }
+        if (this->portfolio_total_shares.empty())
+            this->portfolio_total_shares[date] = shares_amt;
+        else
+            this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second + shares_amt;
+        this->historical_cash[date] = this->historical_cash.rbegin()->second - expense;
     }
-    else
-    {
-        asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second + shares_amt;
-        asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second + expense;
+    else{
+        fprintf(stderr, "not enough cash available to buy this volume of shares\n");
+        std::cout << expense << std::endl;
+        std::cout << this->get_cash_amount(date) << std::endl;
     }
-    if (this->portfolio_total_shares.empty())
-        this->portfolio_total_shares[date] = shares_amt;
-    else
-        this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second + shares_amt;
 }
 
 void PortfolioBuilder::sell(const YahooTimeseries &ticker_yt, double shares_amt, std::time_t date)
@@ -72,6 +89,7 @@ void PortfolioBuilder::sell(const YahooTimeseries &ticker_yt, double shares_amt,
             asset->historical_cumulative_ticker_shares[date] = asset->historical_cumulative_ticker_shares.rbegin()->second - shares_amt;
             asset->historical_cumulative_ticker_expenses[date] = asset->historical_cumulative_ticker_expenses.rbegin()->second - expense;
             this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second - shares_amt;
+            this->historical_cash[date] = this->historical_cash.rbegin()->second + expense;
         }
         else
             fprintf(stderr, "not enough shares available to sell this volume of shares\n");
@@ -113,6 +131,27 @@ void PortfolioBuilder::save_portfolio(std::string filename) const
         ptf_file.close();
     }
 }
+
+double PortfolioBuilder::get_cash_amount(std::time_t date) const
+{
+    double cash_amount = 0.0;
+    try
+    {
+        cash_amount = this->historical_cash.at(date);
+    }
+    catch (const std::out_of_range &e)
+    { // Use out_of_range for map.at()
+        auto it = this->historical_cash.lower_bound(date);
+
+        if (it == this->historical_cash.begin() && it->first > date)
+            return 0.0;
+        if (it != this->historical_cash.begin())
+            --it;
+        cash_amount = it->second;
+    }
+    return cash_amount;
+}
+
 
 double PortfolioBuilder::get_ticker_value(std::string ticker, std::time_t date) const
 {
@@ -200,7 +239,7 @@ double PortfolioBuilder::get_ticker_shares(std::string ticker, std::time_t date)
 
 double PortfolioBuilder::get_portfolio_value(std::time_t date) const
 {
-    double global_value = 0.0;
+    double global_value = this->get_cash_amount(date);
     for (auto &asset : this->assets)
     {
         global_value += this->get_ticker_value(asset.ticker_yt.get_ticker(), date);
@@ -235,12 +274,13 @@ double PortfolioBuilder::get_portfolio_total_shares(std::time_t date) const
 std::map<std::string, double> PortfolioBuilder::get_portfolio_percentage_allocations(std::time_t date) const
 {
     std::map<std::string, double> assets_pct_value_map;
-    if (this->assets.empty())
+    if (this->assets.empty() && this->historical_cash.empty())
         return assets_pct_value_map;
 
     std::vector<std::string> assets;
     std::vector<double> assets_pct_value;
-    double ptf_value = 0.0;
+    double cash_amt = this->get_cash_amount(date);
+    double ptf_value = cash_amt; //0.0;
     double asset_value;
     for (auto &asset : this->assets)
     {
@@ -258,6 +298,8 @@ std::map<std::string, double> PortfolioBuilder::get_portfolio_percentage_allocat
     std::transform(assets.begin(), assets.end(), assets_pct_value.begin(), std::inserter(assets_pct_value_map, assets_pct_value_map.end()),
                    [](const std::string &key, double value)
                    { return std::make_pair(key, value); });
+
+    assets_pct_value_map["Cash"] = cash_amt / ptf_value;
     return assets_pct_value_map;
 }
 
@@ -345,6 +387,6 @@ Timeseries PortfolioBuilder::get_portfolio_profits_and_losses() const
 }
 
 PortfolioBuilder::PortfolioBuilder()
-    : assets({}), portfolio_total_shares({}) {}
+    : assets({}), portfolio_total_shares({}), historical_cash({}) {}
 
 PortfolioBuilder::~PortfolioBuilder() {}

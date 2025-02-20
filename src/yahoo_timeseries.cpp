@@ -198,7 +198,7 @@ std::vector<double> Timeseries::get_volatilities(size_t window_size) const{
         for (size_t j=0; j<window_size; ++j){
             sum_squared_diff += (this->values[i + j] - smas[i]) * (this->values[i + j] - smas[i]);
         }
-        volatilities[i] = std::sqrt(sum_squared_diff / (window_size - 1));
+        volatilities[i] = std::sqrt(sum_squared_diff / window_size);
     }
     return volatilities;
 }
@@ -313,6 +313,18 @@ YahooTimeseries::YahooTimeseries(const std::string ticker, const std::vector<std
 :ticker(ticker), dates(dates), opens(dates, opens), lows(dates, lows), highs(dates, highs), closes(dates, closes), adjcloses(dates, adjcloses), dividends(Timeseries(dividend_map))
 {
     assert(dates.size() == opens.size() && opens.size() == lows.size() && lows.size() == highs.size() && highs.size() == closes.size() && closes.size() == adjcloses.size() && "all vectors must be of the same length");
+}
+
+bool YahooTimeseries::operator==(const YahooTimeseries& other) const
+{
+    return ticker == other.ticker && 
+           dates == other.dates && 
+           opens == other.opens && 
+           lows == other.lows && 
+           highs == other.highs &&
+           closes == other.closes &&
+           adjcloses == other.adjcloses &&
+           dividends == other.dividends;
 }
 
 std::string YahooTimeseries::get_ticker() const{

@@ -59,6 +59,8 @@ public:
                     const std::vector<double> highs, 
                     const std::vector<double> closes,
                     const std::vector<double> adjcloses);
+    
+    bool operator==(const YahooTimeseries& other) const;
     std::string get_ticker() const;
     const std::vector<std::time_t>& get_dates() const;
     const Timeseries& get_opens() const;

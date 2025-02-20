@@ -16,6 +16,78 @@ CustomStrategy::CustomStrategy(const StrategyConfig &config) : config(config)
 
 void CustomStrategy::make_transactions(std::time_t date)
 {
+    this->handle_recurrent_investment_parameters(date);
+    this->apply_technical_indicators(date);
+    this->handle_risk_parameters(date);
+    this->rebalance_portfolio(date);
+}
+
+void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
+{
+    if (this->config.rinv_params.recurrent_investment_amount > 0)
+    {
+        for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
+        {
+            std::string ticker = ticker_yt.get_ticker();
+            std::vector<std::time_t> first_month_dates = this->tickers_rinvestment_dates[ticker];
+            double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
+
+            double ticker_value = ticker_yt.get_closes().get_ts_value(date);
+            double shares_amt = 0.0;
+            double amount = alloc_pct * this->config.rinv_params.recurrent_investment_amount;
+
+            if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0)
+            {
+                if (this->rinv_assets_starting_amounts[ticker] > 0)
+                {
+                    amount += this->rinv_assets_starting_amounts[ticker];
+                    this->rinv_assets_starting_amounts[ticker] = 0;
+                }
+                shares_amt = amount / ticker_value;
+                if (shares_amt > 0)
+                    this->ptf->buy(ticker_yt, shares_amt, date);
+            }
+
+            std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
+
+            if (dividends.size() > 0 && dividends.find(date) != dividends.end())
+            {
+                shares_amt = this->config.global_params.flat_tax * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
+                this->ptf->buy(ticker_yt, shares_amt, date);
+            }
+        }
+    }
+}
+
+void CustomStrategy::apply_technical_indicators(std::time_t date)
+{
+    for (auto &ticker_yt : this->config.indicator_params.sma_tickers_yt)
+    {
+        double short_sma = ticker_yt.get_closes().get_ts_simple_moving_averages()
+    }
+}
+
+void CustomStrategy::rebalance_portfolio(std::time_t date)
+{
+    std::map<std::string, double> ptf_alloc = this->ptf->get_portfolio_percentage_allocations(date);
+    
+    for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
+    {
+        std::string ticker = ticker_yt.get_ticker();
+        double ticker_shares = ptf->get_ticker_shares(ticker, date);
+        double target_alloc = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
+        double ticker_alloc = ptf_alloc[ticker];
+        if (ticker_alloc - target_alloc > this->config.rinv_params.rebalancing_threshold)
+        {
+            ticker_shares -= ticker_shares * target_alloc / ticker_alloc;
+            this->ptf->sell(ticker_yt, ticker_shares, date);
+        }
+        if (target_alloc - ticker_alloc > this->config.rinv_params.rebalancing_threshold && ticker_alloc > 0)
+        {
+            ticker_shares = (ticker_shares * target_alloc / ticker_alloc) - ticker_shares;
+            this->ptf->buy(ticker_yt, ticker_shares, date);
+        }
+    }
 }
 
 Strategy::Strategy(const std::vector<YahooTimeseries> &tickers_yt, std::string strategy_name) : tickers_yt(tickers_yt),

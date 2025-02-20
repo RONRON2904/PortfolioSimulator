@@ -24,9 +24,10 @@ private:
     PortfolioBuilder *ptf;
     const StrategyConfig &config;
 
-    void handle_recurrent_investment_paramters();
-    void apply_technical_indicators();
-    void handle_risk_parameters();
+    void handle_recurrent_investment_parameters(std::time_t date);
+    void apply_technical_indicators(std::time_t date);
+    void handle_risk_parameters(std::time_t date);
+    void rebalance_portfolio(std::time_t date);
 };
 
 class Strategy

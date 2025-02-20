@@ -19,8 +19,11 @@ std::vector<std::time_t> generate_random_dates(size_t count, std::time_t start, 
 std::vector<std::time_t> get_unique_dates(std::vector<YahooTimeseries> tickers_yt);
 std::vector<std::time_t> extract_first_dates_of_each_month(const std::vector<std::time_t> &dates);
 std::vector<std::time_t> extract_last_dates_of_each_month(const std::vector<std::time_t> &dates);
+std::time_t generate_strategy_config_ym_date(int year, int month, int investment_montly_weeknum, int investment_week_day);
+std::vector<std::time_t> extract_strategy_config_recurrent_investment_dates(const std::vector<std::time_t> &dates, int investment_nb_days_frequency, int investment_montly_weeknum, int investment_week_day);
 bool almost_equal(double a, double b, double epsilon);
 bool vectors_almost_equal(const std::vector<double> &v1, const std::vector<double> &v2, double epsilon);
 double get_standard_deviation(const std::vector<double> &values);
+bool contains_all_tickers_yt_vectors(const std::vector<YahooTimeseries> &all_tickers_yt, const std::vector<YahooTimeseries> &sub_tickers_yt);
 
 #endif

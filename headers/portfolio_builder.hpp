@@ -21,11 +21,13 @@ public:
     const struct AssetHolding* get_asset(std::string ticker) const;
     const std::map<std::time_t, double>& get_portfolio_historical_cash_flow() const; 
 
+    void deposit(double cash_amt, std::time_t date);
     void buy(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void sell(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void set_portfolio_values_and_prices();
     void save_portfolio(std::string filename) const;
     
+    double get_cash_amount(std::time_t date) const;
     double get_ticker_value(std::string ticker, std::time_t date) const;
     double get_ticker_shares(std::string ticker, std::time_t date) const;
     double get_ticker_expenses_value(std::string ticker, std::time_t date) const;
@@ -51,6 +53,7 @@ private:
     std::map<std::time_t, double> portfolio_values;
     std::map<std::time_t, double> portfolio_total_shares;
     std::map<std::time_t, double> portfolio_prices;
+    std::map<std::time_t, double> historical_cash;
 };
 
 #endif
