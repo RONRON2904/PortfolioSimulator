@@ -29,8 +29,9 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
         for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
         {
             std::string ticker = ticker_yt.get_ticker();
-            std::vector<std::time_t> first_month_dates = this->tickers_rinvestment_dates[ticker];
-            double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
+            
+            std::vector<std::time_t> first_month_dates = this->config.tickers_rinvestment_dates[ticker];
+            double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations[ticker];
 
             double ticker_value = ticker_yt.get_closes().get_ts_value(date);
             double shares_amt = 0.0;
@@ -38,10 +39,10 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
 
             if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0)
             {
-                if (this->rinv_assets_starting_amounts[ticker] > 0)
+                if (this->config.rinv_assets_starting_amounts[ticker] > 0)
                 {
-                    amount += this->rinv_assets_starting_amounts[ticker];
-                    this->rinv_assets_starting_amounts[ticker] = 0;
+                    amount += this->config.rinv_assets_starting_amounts[ticker];
+                    this->config.rinv_assets_starting_amounts[ticker] = 0;
                 }
                 shares_amt = amount / ticker_value;
                 if (shares_amt > 0)
@@ -61,9 +62,48 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
 
 void CustomStrategy::apply_technical_indicators(std::time_t date)
 {
+    double cash_amt = this->ptf->get_cash_amount(date);
+    double amount_per_ticker = cash_amt / this->config.indicator_params.sma_tickers_yt.size(); //Available cash is equally distributed accross the assets
     for (auto &ticker_yt : this->config.indicator_params.sma_tickers_yt)
     {
-        double short_sma = ticker_yt.get_closes().get_ts_simple_moving_averages()
+        std::string ticker = ticker_yt.get_ticker();
+        double short_sma = this->config.tech_ind_short_sma_values[ticker][date];
+        double long_sma = this->config.tech_ind_long_sma_values[ticker][date];
+        if (short_sma > long_sma)
+        {
+            double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
+            this->ptf->buy(ticker_yt, shares_amt, date);
+        }
+        else if (short_sma < long_sma) //sell it all
+        {
+            double ticker_shares = ptf->get_ticker_shares(ticker, date);
+            this->ptf->sell(ticker_yt, ticker_shares, date);
+        }
+    }
+
+    amount_per_ticker = cash_amt / this->config.indicator_params.rsi_tickers_yt.size(); //Available cash is equally distributed accross the assets
+    for (auto &ticker_yt : this->config.indicator_params.rsi_tickers_yt)
+    {
+        std::string ticker = ticker_yt.get_ticker();
+        double rsis = this->config.tech_ind_rsi_values[ticker][date];
+        if (rsis < this->config.indicator_params.rsi_buy_threshold)
+        {
+            double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
+            this->ptf->buy(ticker_yt, shares_amt, date);
+        }
+        else if (rsis > this->config.indicator_params.rsi_sell_threshold) //sell it all
+        {
+            double ticker_shares = ptf->get_ticker_shares(ticker, date);
+            this->ptf->sell(ticker_yt, ticker_shares, date);
+        }
+    }
+}
+
+void CustomStrategy::handle_risk_parameters(std::time_t date)
+{
+    for (auto &ticker_yt: this->config.risk_params.risk_tickers_yt)
+    {
+        
     }
 }
 

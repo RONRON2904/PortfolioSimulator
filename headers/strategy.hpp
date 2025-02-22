@@ -22,7 +22,7 @@ public:
 
 private:
     PortfolioBuilder *ptf;
-    const StrategyConfig &config;
+    StrategyConfig &config;
 
     void handle_recurrent_investment_parameters(std::time_t date);
     void apply_technical_indicators(std::time_t date);
