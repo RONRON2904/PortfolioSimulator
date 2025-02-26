@@ -161,11 +161,14 @@ std::vector<double> Timeseries::get_pct_changes() const{
     return pct_changes;
 }
 
-std::map<std::time_t, double> Timeseries::get_ts_pct_changes() const{
+std::map<std::time_t, double> Timeseries::get_ts_pct_changes(size_t window_size) const
+{
+    assert(this->values.size() >= window_size && "Error: Window size can't exceed the timeseries size\n");
+    assert(window_size > 0 && "Error: Window size must be > 0\n");
     assert(this->values.size() > 2  && "Error: Timeseries must contains at least 3 elements for getting the pct change between d-2 and d-1 at date d\n");
     std::map<std::time_t, double> pct_changes;
-    for (size_t i=1; i < this->values.size() - 1; ++i){
-        pct_changes[this->dates[i+1]] = (this->values[i] - this->values[i-1]) / this->values[i-1];
+    for (size_t i=0; i < this->values.size() - window_size; ++i){
+        pct_changes[this->dates[i + window_size]] = (this->values[i + window_size] - this->values[i]) / this->values[i];
     }
     return pct_changes;
 }
@@ -317,14 +320,14 @@ YahooTimeseries::YahooTimeseries(const std::string ticker, const std::vector<std
 
 bool YahooTimeseries::operator==(const YahooTimeseries& other) const
 {
-    return ticker == other.ticker && 
-           dates == other.dates && 
-           opens == other.opens && 
-           lows == other.lows && 
-           highs == other.highs &&
-           closes == other.closes &&
-           adjcloses == other.adjcloses &&
-           dividends == other.dividends;
+    return this->ticker == other.ticker && 
+            this->dates == other.dates && 
+            this->opens == other.opens && 
+            this->lows == other.lows && 
+            this->highs == other.highs &&
+            this->closes == other.closes &&
+            this->adjcloses == other.adjcloses &&
+            this->dividends == other.dividends;
 }
 
 std::string YahooTimeseries::get_ticker() const{

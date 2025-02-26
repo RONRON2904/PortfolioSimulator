@@ -29,7 +29,7 @@ public:
     std::map<std::time_t, double> get_ts_simple_moving_averages(size_t window_size) const;
     std::map<std::time_t, double> get_ts_exponential_moving_averages(size_t window_size) const;
     std::map<std::time_t, double> get_ts_maximum_drawdowns(size_t window_size) const;
-    std::map<std::time_t, double> get_ts_pct_changes() const;
+    std::map<std::time_t, double> get_ts_pct_changes(size_t window_size) const;
     std::map<std::time_t, double> get_ts_log_returns() const;
     std::map<std::time_t, double> get_ts_volatilities(size_t window_size) const;
     std::map<std::time_t, double> get_ts_rsis(size_t window_size) const;

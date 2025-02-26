@@ -48,7 +48,7 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
 {
     struct AssetHolding *asset = this->get_asset(ticker_yt.get_ticker());
     double expense = shares_amt * ticker_yt.get_closes().get_ts_value(date);
-    if (expense <= this->get_cash_amount(date))
+    if (this->get_cash_amount(date) - expense >= -0.001)
     {
         this->historical_cash_flow[date] -= expense;
         if (asset == nullptr)
@@ -71,6 +71,8 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
     }
     else{
         fprintf(stderr, "not enough cash available to buy this volume of shares\n");
+        std::cout << unix_timestamp_to_date_string(date) << std::endl;
+        std::cout << ticker_yt.get_ticker() << std::endl;
         std::cout << expense << std::endl;
         std::cout << this->get_cash_amount(date) << std::endl;
     }

@@ -248,9 +248,10 @@ std::vector<std::time_t> extract_strategy_config_recurrent_investment_dates(cons
     int current_month = time_info->tm_mon;
     for (size_t i = 1; i < dates.size(); ++i){
         time_info = std::localtime(&dates[i]);
+        //std::cout << unix_timestamp_to_date_string(dates[i]) << std::endl;
         int next_invest_month = (current_month + investment_nb_months_frequency) % 12;
         int date_m_week = (time_info->tm_mday / 7) + 1; 
-        int delta = investment_nb_months_frequency - (12 - current_month);
+        int delta = investment_nb_months_frequency - (11 - current_month);
         int next_invest_year = current_year;
 
         if (delta > 0)
@@ -262,6 +263,8 @@ std::vector<std::time_t> extract_strategy_config_recurrent_investment_dates(cons
         std::time_t next_target_investment_date = generate_strategy_config_ym_date(next_invest_year, next_invest_month, investment_montly_weeknum, investment_week_day);
         std::time_t next_investment_date = *std::lower_bound(dates.begin() + i, dates.end(), next_target_investment_date);
         invest_dates.push_back(next_investment_date);
+        //std::cout << "INVESTMENT DATE INSERTED: " << std::endl;
+        //std::cout << unix_timestamp_to_date_string(next_investment_date) << std::endl;
         current_month = next_invest_month;
         current_year = next_invest_year;
     }
@@ -295,6 +298,8 @@ double get_standard_deviation(const std::vector<double>& values){
 
 bool contains_all_tickers_yt_vectors(const std::vector<YahooTimeseries>& all_tickers_yt, const std::vector<YahooTimeseries>& sub_tickers_yt) 
 {
+    if (sub_tickers_yt.size() == 0)
+        return true;
     for (const auto& elem : sub_tickers_yt) {
         if (std::find(all_tickers_yt.begin(), all_tickers_yt.end(), elem) == all_tickers_yt.end()) {
             return false; // Element from sub_tickers_yt not found in all_tickers_yt

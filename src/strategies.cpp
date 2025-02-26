@@ -8,7 +8,7 @@
 #include <random>
 #include <omp.h>
 
-CustomStrategy::CustomStrategy(const StrategyConfig &config) : config(config)
+CustomStrategy::CustomStrategy(StrategyConfig &config) : config(config)
 {
     PortfolioBuilder *ptf = new PortfolioBuilder();
     this->ptf = ptf;
@@ -22,6 +22,133 @@ void CustomStrategy::make_transactions(std::time_t date)
     this->rebalance_portfolio(date);
 }
 
+void CustomStrategy::run_strategy()
+{
+    std::vector<std::time_t> dates = get_unique_dates(this->config.global_params.all_tickers_yt);
+    this->ptf->deposit(this->config.global_params.starting_amount, dates.front());
+    for (const auto &date : dates)
+        this->make_transactions(date);
+    this->ptf->set_portfolio_values_and_prices();
+}
+
+const std::map<std::time_t, double> CustomStrategy::get_strategy_values() const
+{
+    return this->ptf->get_portfolio_values();
+}
+
+double CustomStrategy::get_strategy_total_returns() const
+{
+    double last_pf_value = this->ptf->get_portfolio_values().rbegin()->second;
+    double last_pf_expense = 0.0;
+    for (const auto &ticker_yt : this->config.global_params.all_tickers_yt)
+    {
+        last_pf_expense += this->ptf->get_ticker_expenses_value(ticker_yt.get_ticker(), ticker_yt.get_dates().back());
+    }
+    return last_pf_value / last_pf_expense - 1;
+}
+
+double CustomStrategy::get_strategy_extended_internal_return_rate(double tolerance, int max_iterations) const
+{
+    std::vector<std::time_t> dates = get_unique_dates(this->config.global_params.all_tickers_yt);
+
+    std::vector<double> ptf_cash_flow;
+    std::vector<time_t> ptf_cash_flow_dates;
+    for (const auto &pair : this->ptf->get_portfolio_historical_cash_flow())
+        if (abs(pair.second) > 1e-3)
+        {
+            ptf_cash_flow_dates.push_back(pair.first);
+            ptf_cash_flow.push_back(pair.second);
+        }
+    ptf_cash_flow.push_back(this->ptf->get_portfolio_value(dates.back()));
+    ptf_cash_flow_dates.push_back(dates.back());
+
+    double lower_bound = -1.0;
+    double upper_bound = 1.0;
+    double rate = 0.0;
+    std::time_t first_date = ptf_cash_flow_dates[0];
+
+    for (int i = 0; i < max_iterations; ++i)
+    {
+        double npv = 0.0;
+        rate = (lower_bound + upper_bound) / 2.0;
+        for (size_t i = 0; i < ptf_cash_flow.size(); ++i)
+        {
+            double days = std::difftime(ptf_cash_flow_dates[i], first_date) / (60 * 60 * 24);
+            npv += ptf_cash_flow[i] / pow(1.0 + rate, days / 365.0);
+        }
+
+        if (fabs(npv) < tolerance)
+        {
+            return rate;
+        }
+
+        if (npv > 0)
+            lower_bound = rate;
+        else
+            upper_bound = rate;
+    }
+
+    return rate;
+}
+
+void CustomStrategy::save_end_portfolio(std::string filename)
+{
+    this->ptf->save_portfolio(filename);
+    double tr = 100 * this->get_strategy_total_returns();
+    double xirr = 100 * this->get_strategy_extended_internal_return_rate(1e-3, 1000);
+    double ptf_end_value = this->ptf->get_portfolio_values().rbegin()->second;
+    std::cout << "Strategy " + this->config.global_params.strategy_name + " Total Returns: " << std::ceil(tr * 100.0) / 100.0 << "% - Internal Rate of Return: " << std::ceil(xirr * 100.0) / 100.0 << "%" << " Portfolio End Value: " << ptf_end_value << std::endl;
+}
+
+const YahooTimeseries CustomStrategy::montecarlo_simulation(const std::vector<std::time_t> &future_dates)
+{
+    Timeseries portfolio_prices = this->ptf->get_ts_portfolio_prices();
+    std::vector<double> pct_changes = portfolio_prices.get_pct_changes();
+    double ptf_mean_return = std::accumulate(pct_changes.begin(), pct_changes.end(), 0.0) / pct_changes.size();
+    double ptf_volatility = get_standard_deviation(pct_changes);
+
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::normal_distribution<double> normal_dist(ptf_mean_return, ptf_volatility);
+
+    std::vector<double> future_prices(future_dates.size());
+    future_prices[0] = portfolio_prices.get_ts_values().rbegin()->second;
+    for (size_t i = 1; i < future_dates.size(); ++i)
+    {
+        future_prices[i] = future_prices[i - 1] + (future_prices[i - 1] * normal_dist(generator));
+    }
+    return YahooTimeseries("MonteCarloSimulationTicker", future_dates, future_prices, future_prices, future_prices, future_prices, future_prices);
+}
+
+void CustomStrategy::run_montecarlo_simulations(size_t nb_simu)
+{
+    std::time_t currentTime = std::time(nullptr); // get current date
+    std::tm *tm_start = std::localtime(&currentTime);
+    std::tm tm_end = *tm_start;
+    // Add 20 years to the current year
+    tm_end.tm_year += 20;
+
+    std::time_t start = std::mktime(tm_start);
+    std::time_t end = std::mktime(&tm_end);
+    size_t count = 1 + 252 * 20;
+    std::vector<std::time_t> future_dates = generate_random_dates(count, start, end);
+
+#pragma omp parallel for num_threads(6)
+    for (size_t i = 0; i < nb_simu; ++i)
+    {
+        const YahooTimeseries yt = this->montecarlo_simulation(future_dates);
+        CustomStrategy *strat = new CustomStrategy(config);
+        strat->run_strategy();
+        strat->save_end_portfolio(this->config.global_params.strategy_name + "_ms_" +std::to_string(i));
+        delete strat;
+    }
+}
+
+CustomStrategy::~CustomStrategy()
+{
+    delete this->ptf;
+}
+
 void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
 {
     if (this->config.rinv_params.recurrent_investment_amount > 0)
@@ -30,14 +157,14 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
         {
             std::string ticker = ticker_yt.get_ticker();
             
-            std::vector<std::time_t> first_month_dates = this->config.tickers_rinvestment_dates[ticker];
-            double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations[ticker];
+            std::vector<std::time_t> ticker_invest_dates = this->config.tickers_rinvestment_dates[ticker];
+            double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
 
             double ticker_value = ticker_yt.get_closes().get_ts_value(date);
             double shares_amt = 0.0;
             double amount = alloc_pct * this->config.rinv_params.recurrent_investment_amount;
 
-            if (std::count(first_month_dates.begin(), first_month_dates.end(), date) > 0)
+            if (std::count(ticker_invest_dates.begin(), ticker_invest_dates.end(), date) > 0)
             {
                 if (this->config.rinv_assets_starting_amounts[ticker] > 0)
                 {
@@ -45,8 +172,10 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
                     this->config.rinv_assets_starting_amounts[ticker] = 0;
                 }
                 shares_amt = amount / ticker_value;
-                if (shares_amt > 0)
+                if (shares_amt > 0){
+                    this->ptf->deposit(amount, date);
                     this->ptf->buy(ticker_yt, shares_amt, date);
+                }
             }
 
             std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
@@ -103,14 +232,21 @@ void CustomStrategy::handle_risk_parameters(std::time_t date)
 {
     for (auto &ticker_yt: this->config.risk_params.risk_tickers_yt)
     {
-        
+        std::string ticker = ticker_yt.get_ticker();
+        double ticker_expense = this->ptf->get_ticker_expenses_value(ticker, date);
+        double ticker_value = this->ptf->get_ticker_value(ticker, date);
+        if ((ticker_value > (1 + this->config.risk_params.take_profit_percentage) * ticker_expense) || 
+            (ticker_value < (1 - this->config.risk_params.stop_loss_percentage) * ticker_expense))
+        {
+            double ticker_shares = ptf->get_ticker_shares(ticker, date);
+            this->ptf->sell(ticker_yt, ticker_shares, date);
+        }
     }
 }
 
 void CustomStrategy::rebalance_portfolio(std::time_t date)
 {
     std::map<std::string, double> ptf_alloc = this->ptf->get_portfolio_percentage_allocations(date);
-    
     for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
     {
         std::string ticker = ticker_yt.get_ticker();
@@ -122,6 +258,13 @@ void CustomStrategy::rebalance_portfolio(std::time_t date)
             ticker_shares -= ticker_shares * target_alloc / ticker_alloc;
             this->ptf->sell(ticker_yt, ticker_shares, date);
         }
+    }
+    for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
+    {
+        std::string ticker = ticker_yt.get_ticker();
+        double ticker_shares = ptf->get_ticker_shares(ticker, date);
+        double target_alloc = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
+        double ticker_alloc = ptf_alloc[ticker];
         if (target_alloc - ticker_alloc > this->config.rinv_params.rebalancing_threshold && ticker_alloc > 0)
         {
             ticker_shares = (ticker_shares * target_alloc / ticker_alloc) - ticker_shares;

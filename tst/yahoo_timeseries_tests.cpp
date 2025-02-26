@@ -151,8 +151,12 @@ TEST(Timeseries, get_ts_pct_changes) {
 
     Timeseries* ts =  new Timeseries(random_dates, {100, 90, 110, 90, 120, 140, 100, 90, 140, 145});
 
-    std::map<std::time_t, double> pct_changes = ts->get_ts_pct_changes();
-    std::map<std::time_t, double> expected = {{random_dates[2], -0.1}, {random_dates[3], 20.0/90.0}, {random_dates[4], -20.0/110.0}, {random_dates[5], 30.0/90.0}, {random_dates[6], 20.0/120.0}, {random_dates[7], -40.0/140.0}, {random_dates[8], -0.1}, {random_dates[9], 50.0/90.0}};
+    std::map<std::time_t, double> pct_changes = ts->get_ts_pct_changes(1);
+    std::map<std::time_t, double> expected = {{random_dates[1], -0.1}, {random_dates[2], 20.0/90.0}, {random_dates[3], -20.0/110.0}, {random_dates[4], 30.0/90.0}, {random_dates[5], 20.0/120.0}, {random_dates[6], -40.0/140.0}, {random_dates[7], -0.1}, {random_dates[8], 50.0/90.0}, {random_dates[9], 5.0/140.0}};
+    EXPECT_EQ(expected, pct_changes);
+
+    pct_changes = ts->get_ts_pct_changes(3);
+    expected = {{random_dates[3], -0.1}, {random_dates[4], 30.0/90.0}, {random_dates[5], 30.0/110.0}, {random_dates[6], 10.0/90.0}, {random_dates[7], -30.0/120.0}, {random_dates[8], 0.0}, {random_dates[9], 0.45}};
     EXPECT_EQ(expected, pct_changes);
     delete ts;
 }

@@ -7,14 +7,14 @@
 class CustomStrategy
 {
 public:
-    explicit CustomStrategy(const StrategyConfig &config);
+    explicit CustomStrategy(StrategyConfig &config);
     void make_transactions(std::time_t date);
     void run_strategy();
 
     const std::map<std::time_t, double> get_strategy_values() const;
     double get_strategy_total_returns() const;
     double get_strategy_extended_internal_return_rate(double tolerance, int max_iterations) const;
-    void save_end_portfolio();
+    void save_end_portfolio(std::string filename);
 
     const YahooTimeseries montecarlo_simulation(const std::vector<std::time_t> &future_dates);
     void run_montecarlo_simulations(size_t nb_simu);
