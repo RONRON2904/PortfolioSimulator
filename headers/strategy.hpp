@@ -21,7 +21,7 @@ public:
     ~CustomStrategy();
 
 private:
-    PortfolioBuilder *ptf;
+    PortfolioBuilder *ptf; // Try with PortfolioBuilder &ptf;
     StrategyConfig &config;
 
     void handle_recurrent_investment_parameters(std::time_t date);

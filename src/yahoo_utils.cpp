@@ -226,6 +226,7 @@ std::vector<std::time_t> extract_last_dates_of_each_month(const std::vector<std:
     return last_dates;
 }
 
+
 std::time_t generate_strategy_config_ym_date(int year, int month, int investment_montly_weeknum, int investment_week_day){
     struct tm timeStruct = {0};
     timeStruct.tm_year = year;
@@ -234,7 +235,7 @@ std::time_t generate_strategy_config_ym_date(int year, int month, int investment
     mktime(&timeStruct);
 
     int dayOfWeek = timeStruct.tm_wday;
-    int daysToAdd = ((investment_week_day - dayOfWeek + 7) % 7) + (7 * (investment_montly_weeknum - 1));
+    int daysToAdd = ((investment_week_day - dayOfWeek + 7) % 7) + (7 * investment_montly_weeknum);
     timeStruct.tm_mday += daysToAdd;
     return mktime(&timeStruct);
 }
@@ -248,7 +249,6 @@ std::vector<std::time_t> extract_strategy_config_recurrent_investment_dates(cons
     int current_month = time_info->tm_mon;
     for (size_t i = 1; i < dates.size(); ++i){
         time_info = std::localtime(&dates[i]);
-        //std::cout << unix_timestamp_to_date_string(dates[i]) << std::endl;
         int next_invest_month = (current_month + investment_nb_months_frequency) % 12;
         int date_m_week = (time_info->tm_mday / 7) + 1; 
         int delta = investment_nb_months_frequency - (11 - current_month);
@@ -263,8 +263,6 @@ std::vector<std::time_t> extract_strategy_config_recurrent_investment_dates(cons
         std::time_t next_target_investment_date = generate_strategy_config_ym_date(next_invest_year, next_invest_month, investment_montly_weeknum, investment_week_day);
         std::time_t next_investment_date = *std::lower_bound(dates.begin() + i, dates.end(), next_target_investment_date);
         invest_dates.push_back(next_investment_date);
-        //std::cout << "INVESTMENT DATE INSERTED: " << std::endl;
-        //std::cout << unix_timestamp_to_date_string(next_investment_date) << std::endl;
         current_month = next_invest_month;
         current_year = next_invest_year;
     }

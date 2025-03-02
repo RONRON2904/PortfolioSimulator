@@ -19,7 +19,13 @@ void CustomStrategy::make_transactions(std::time_t date)
     this->handle_recurrent_investment_parameters(date);
     this->apply_technical_indicators(date);
     this->handle_risk_parameters(date);
-    this->rebalance_portfolio(date);
+    if (this->config.rinv_params.last_rebalancing_nb_days == this->config.rinv_params.rebalancing_freq)
+    {
+        this->rebalance_portfolio(date);
+        this->config.rinv_params.last_rebalancing_nb_days = 0;
+    }
+    else
+        this->config.rinv_params.last_rebalancing_nb_days++;
 }
 
 void CustomStrategy::run_strategy()
@@ -27,7 +33,13 @@ void CustomStrategy::run_strategy()
     std::vector<std::time_t> dates = get_unique_dates(this->config.global_params.all_tickers_yt);
     this->ptf->deposit(this->config.global_params.starting_amount, dates.front());
     for (const auto &date : dates)
+    {
+        if (std::count(this->config.global_params.monthly_deposit_dates.begin(), this->config.global_params.monthly_deposit_dates.end(), date) > 0)
+        {
+            ptf->deposit(this->config.rinv_params.recurrent_investment_amount, date);
+        }
         this->make_transactions(date);
+    }
     this->ptf->set_portfolio_values_and_prices();
 }
 
@@ -157,7 +169,7 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
         {
             std::string ticker = ticker_yt.get_ticker();
             
-            std::vector<std::time_t> ticker_invest_dates = this->config.tickers_rinvestment_dates[ticker];
+            std::vector<std::time_t> ticker_invest_dates = this->config.rinv_params.tickers_rinvestment_dates[ticker]; //this->config.tickers_rinvestment_dates[ticker];
             double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
 
             double ticker_value = ticker_yt.get_closes().get_ts_value(date);
@@ -166,14 +178,14 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
 
             if (std::count(ticker_invest_dates.begin(), ticker_invest_dates.end(), date) > 0)
             {
-                if (this->config.rinv_assets_starting_amounts[ticker] > 0)
+                if (this->config.rinv_params.rinv_assets_starting_amounts[ticker] > 0) //if (this->config.rinv_assets_starting_amounts[ticker] > 0)
                 {
-                    amount += this->config.rinv_assets_starting_amounts[ticker];
-                    this->config.rinv_assets_starting_amounts[ticker] = 0;
+                    amount += this->config.rinv_params.rinv_assets_starting_amounts[ticker];//this->config.rinv_assets_starting_amounts[ticker];
+                    this->config.rinv_params.rinv_assets_starting_amounts[ticker] = 0; //this->config.rinv_assets_starting_amounts[ticker] = 0;
                 }
                 shares_amt = amount / ticker_value;
-                if (shares_amt > 0){
-                    this->ptf->deposit(amount, date);
+                if (shares_amt > 0  && this->ptf->get_cash_amount(date) > 0.01){
+                    //this->ptf->deposit(amount, date);
                     this->ptf->buy(ticker_yt, shares_amt, date);
                 }
             }
@@ -196,8 +208,8 @@ void CustomStrategy::apply_technical_indicators(std::time_t date)
     for (auto &ticker_yt : this->config.indicator_params.sma_tickers_yt)
     {
         std::string ticker = ticker_yt.get_ticker();
-        double short_sma = this->config.tech_ind_short_sma_values[ticker][date];
-        double long_sma = this->config.tech_ind_long_sma_values[ticker][date];
+        double short_sma = this->config.indicator_params.tech_ind_short_sma_values[ticker][date];
+        double long_sma = this->config.indicator_params.tech_ind_long_sma_values[ticker][date];
         if (short_sma > long_sma)
         {
             double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
@@ -214,13 +226,31 @@ void CustomStrategy::apply_technical_indicators(std::time_t date)
     for (auto &ticker_yt : this->config.indicator_params.rsi_tickers_yt)
     {
         std::string ticker = ticker_yt.get_ticker();
-        double rsis = this->config.tech_ind_rsi_values[ticker][date];
+        double rsis = this->config.indicator_params.tech_ind_rsi_values[ticker][date];
         if (rsis < this->config.indicator_params.rsi_buy_threshold)
         {
             double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
             this->ptf->buy(ticker_yt, shares_amt, date);
         }
         else if (rsis > this->config.indicator_params.rsi_sell_threshold) //sell it all
+        {
+            double ticker_shares = ptf->get_ticker_shares(ticker, date);
+            this->ptf->sell(ticker_yt, ticker_shares, date);
+        }
+    }
+    amount_per_ticker = cash_amt / this->config.indicator_params.rsi_sma_tickers_yt.size();
+    for (auto &ticker_yt : this->config.indicator_params.rsi_sma_tickers_yt)
+    {
+        std::string ticker = ticker_yt.get_ticker();
+        double rsis = this->config.indicator_params.tech_ind_rsi_values[ticker][date];
+        double short_sma = this->config.indicator_params.tech_ind_short_sma_values[ticker][date];
+        double long_sma = this->config.indicator_params.tech_ind_long_sma_values[ticker][date];
+        if (rsis < this->config.indicator_params.rsi_buy_threshold && short_sma > long_sma)
+        {
+            double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
+            this->ptf->buy(ticker_yt, shares_amt, date);
+        }
+        else if (rsis > this->config.indicator_params.rsi_sell_threshold && short_sma < long_sma) //sell it all
         {
             double ticker_shares = ptf->get_ticker_shares(ticker, date);
             this->ptf->sell(ticker_yt, ticker_shares, date);
@@ -253,7 +283,7 @@ void CustomStrategy::rebalance_portfolio(std::time_t date)
         double ticker_shares = ptf->get_ticker_shares(ticker, date);
         double target_alloc = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
         double ticker_alloc = ptf_alloc[ticker];
-        if (ticker_alloc - target_alloc > this->config.rinv_params.rebalancing_threshold)
+        if (ticker_alloc - target_alloc > this->config.rinv_params.rebalancing_threshold && ticker_alloc > 0)
         {
             ticker_shares -= ticker_shares * target_alloc / ticker_alloc;
             this->ptf->sell(ticker_yt, ticker_shares, date);

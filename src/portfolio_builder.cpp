@@ -121,13 +121,14 @@ void PortfolioBuilder::save_portfolio(std::string filename) const
     double last_pls = 0.0;
     if (ptf_file.is_open())
     {
-        ptf_file << "Date;Value;P&L;Investments" << std::endl;
+        ptf_file << "Date;Value;P&L;Investments;Cash" << std::endl;
         for (const auto &pair : ptf_ts_values)
         {
+            double cash = std::round(this->get_cash_amount(pair.first) * 100.0) / 100.0;
             if (ptf_pls_ts_values[pair.first] == 0)
-                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << last_pls << ";" << pair.second - last_pls << std::endl;
+                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << last_pls << ";" << pair.second - last_pls << ";" << cash << std::endl;
             else
-                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << ";" << pair.second - ptf_pls_ts_values[pair.first] << std::endl;
+                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << ";" << pair.second - ptf_pls_ts_values[pair.first] << ";" << cash << std::endl;
             last_pls = ptf_pls_ts_values[pair.first];
         }
         ptf_file.close();
@@ -308,6 +309,11 @@ std::map<std::string, double> PortfolioBuilder::get_portfolio_percentage_allocat
 std::map<std::time_t, double> PortfolioBuilder::get_portfolio_values() const
 {
     return this->portfolio_values;
+}
+
+std::map<std::time_t, double> PortfolioBuilder::get_portfolio_historical_cash() const
+{
+    return this->historical_cash;
 }
 
 Timeseries PortfolioBuilder::get_ticker_values(std::string ticker) const

@@ -37,6 +37,7 @@ public:
     std::vector<std::time_t> get_unique_portfolio_dates() const;
     std::map<std::string, double> get_portfolio_percentage_allocations(std::time_t date) const;
     std::map<std::time_t, double> get_portfolio_values() const;
+    std::map<std::time_t, double> get_portfolio_historical_cash() const;
     
     Timeseries get_ticker_values(std::string ticker) const;
     Timeseries get_ts_portfolio_values() const;
