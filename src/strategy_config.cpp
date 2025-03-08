@@ -20,7 +20,7 @@ StrategyConfig::StrategyConfig(const GeneralParameters &global_params,
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, indicator_params.sma_tickers_yt) && "Tickers with sma conditions are not included in the global tickers list");
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, indicator_params.rsi_tickers_yt) && "Tickers with rsi conditions are not included in the global tickers list");
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, risk_params.risk_tickers_yt) && "Tickers with risk management conditions are not included in the global tickers list");
-    assert(rinv_params.starting_amount + indicator_params.rsi_starting_amount + indicator_params.sma_starting_amount <= global_params.starting_amount && "Recurrent & Technical investment starting amount sum can't be greater that global starting amount");
+    assert(rinv_params.starting_amount + indicator_params.rsi_starting_amount + indicator_params.sma_starting_amount + indicator_params.rsi_sma_starting_amount <= global_params.starting_amount && "Recurrent & Technical investment starting amount sum can't be greater that global starting amount");
 }
 
 RecurrentInvestmentParameters::RecurrentInvestmentParameters(): rinv_tickers_yt(EMPTY_YTIMESERIES), assets_desired_pct_allocations(EMPTY_MAP) {}
@@ -125,8 +125,7 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
                                          const std::vector<YahooTimeseries> &sma_tickers_yt,
                                          const std::vector<YahooTimeseries> &rsi_sma_tickers_yt,
                                          size_t rsi_period,
-                                         size_t long_sma_period,
-                                         size_t short_sma_period,
+                                         size_t sma_period,
                                          double rsi_buy_threshold,
                                          double rsi_sell_threshold,
                                          double rsi_starting_amount,
@@ -135,8 +134,7 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
                                                                      sma_tickers_yt(sma_tickers_yt),
                                                                      rsi_sma_tickers_yt(rsi_sma_tickers_yt),
                                                                      rsi_period(rsi_period),
-                                                                     long_sma_period(long_sma_period),
-                                                                     short_sma_period(short_sma_period),
+                                                                     sma_period(sma_period),
                                                                      rsi_buy_threshold(rsi_buy_threshold),
                                                                      rsi_sell_threshold(rsi_sell_threshold),
                                                                      rsi_starting_amount(rsi_starting_amount),
@@ -144,16 +142,15 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
                                                                      rsi_sma_starting_amount(rsi_sma_starting_amount)
 {
     assert(rsi_tickers_yt.size() + sma_tickers_yt.size() + rsi_sma_tickers_yt.size() > 0 && "Configuring technical indicators needs to have assets \n");
-    assert(rsi_period > 0  && "Window for the rsi must be > 0");
-    assert(long_sma_period > 0  && "Window for the rsi must be > 0");
-    assert(short_sma_period > 0  && "Window for the rsi must be > 0");
-    assert(rsi_buy_threshold >= 0  && "RSI buy for the rsi must be >= 0");
-    assert(rsi_buy_threshold <= 100  && "RSI buy for the rsi must be <= 100");
-    assert(rsi_sell_threshold >= 0  && "RSI sell threhold must be >= 0");
-    assert(rsi_sell_threshold <= 100  && "RSI sell threhold must be <= 100");
-    assert(rsi_starting_amount >= 0  && "RSI starting amount must be >= 0");
-    assert(sma_starting_amount >= 0  && "SMA starting amount must be >= 0");
-    assert(rsi_sma_starting_amount >= 0  && "RSI SMA starting amount must be >= 0");
+    assert(rsi_period > 0  && "Window for the rsi must be > 0\n");
+    assert(sma_period > 0  && "Window for the rsi must be > 0\n");
+    assert(rsi_buy_threshold >= 0  && "RSI buy for the rsi must be >= 0\n");
+    assert(rsi_buy_threshold <= 100  && "RSI buy for the rsi must be <= 100\n");
+    assert(rsi_sell_threshold >= 0  && "RSI sell threhold must be >= 0\n");
+    assert(rsi_sell_threshold <= 100  && "RSI sell threhold must be <= 100\n");
+    assert(rsi_starting_amount >= 0  && "RSI starting amount must be >= 0\n");
+    assert(sma_starting_amount >= 0  && "SMA starting amount must be >= 0\n");
+    assert(rsi_sma_starting_amount >= 0  && "RSI SMA starting amount must be >= 0\n");
 
 
     if (sma_tickers_yt.size() > 0)
@@ -161,8 +158,7 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
         for (auto &ticker_yt: sma_tickers_yt)
         {
             std::string ticker = ticker_yt.get_ticker();
-            this->tech_ind_short_sma_values[ticker] = ticker_yt.get_closes().get_ts_simple_moving_averages(short_sma_period);
-            this->tech_ind_long_sma_values[ticker] = ticker_yt.get_closes().get_ts_simple_moving_averages(long_sma_period);
+            this->tech_ind_sma_values[ticker] = ticker_yt.get_closes().get_ts_simple_moving_averages(sma_period);
         }
     }
 
@@ -171,6 +167,16 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
         for (auto &ticker_yt: rsi_tickers_yt)
         {
             this->tech_ind_rsi_values[ticker_yt.get_ticker()] = ticker_yt.get_closes().get_ts_rsis(rsi_period);
+        }
+    }
+
+    if (rsi_sma_tickers_yt.size() > 0)
+    {
+        for (auto &ticker_yt: rsi_sma_tickers_yt)
+        {
+            std::string ticker = ticker_yt.get_ticker();
+            this->tech_ind_sma_values[ticker] = ticker_yt.get_closes().get_ts_simple_moving_averages(sma_period);
+            this->tech_ind_rsi_values[ticker] = ticker_yt.get_closes().get_ts_rsis(rsi_period);
         }
     }
 

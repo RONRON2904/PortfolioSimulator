@@ -36,7 +36,7 @@ void CustomStrategy::run_strategy()
     {
         if (std::count(this->config.global_params.monthly_deposit_dates.begin(), this->config.global_params.monthly_deposit_dates.end(), date) > 0)
         {
-            ptf->deposit(this->config.rinv_params.recurrent_investment_amount, date);
+            ptf->deposit(this->config.global_params.monthly_deposit_amount, date);
         }
         this->make_transactions(date);
     }
@@ -208,14 +208,14 @@ void CustomStrategy::apply_technical_indicators(std::time_t date)
     for (auto &ticker_yt : this->config.indicator_params.sma_tickers_yt)
     {
         std::string ticker = ticker_yt.get_ticker();
-        double short_sma = this->config.indicator_params.tech_ind_short_sma_values[ticker][date];
-        double long_sma = this->config.indicator_params.tech_ind_long_sma_values[ticker][date];
-        if (short_sma > long_sma)
+        double ticker_price = ticker_yt.get_closes().get_ts_value(date);
+        double sma = this->config.indicator_params.tech_ind_sma_values[ticker][date];
+        if (sma < ticker_price)
         {
             double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
             this->ptf->buy(ticker_yt, shares_amt, date);
         }
-        else if (short_sma < long_sma) //sell it all
+        else if (sma > ticker_price) //sell it all
         {
             double ticker_shares = ptf->get_ticker_shares(ticker, date);
             this->ptf->sell(ticker_yt, ticker_shares, date);
@@ -242,15 +242,15 @@ void CustomStrategy::apply_technical_indicators(std::time_t date)
     for (auto &ticker_yt : this->config.indicator_params.rsi_sma_tickers_yt)
     {
         std::string ticker = ticker_yt.get_ticker();
+        double ticker_price = ticker_yt.get_closes().get_ts_value(date);
         double rsis = this->config.indicator_params.tech_ind_rsi_values[ticker][date];
-        double short_sma = this->config.indicator_params.tech_ind_short_sma_values[ticker][date];
-        double long_sma = this->config.indicator_params.tech_ind_long_sma_values[ticker][date];
-        if (rsis < this->config.indicator_params.rsi_buy_threshold && short_sma > long_sma)
+        double sma = this->config.indicator_params.tech_ind_sma_values[ticker][date];
+        if (rsis < this->config.indicator_params.rsi_buy_threshold && sma < ticker_price)
         {
             double shares_amt = amount_per_ticker / ticker_yt.get_closes().get_ts_value(date);
             this->ptf->buy(ticker_yt, shares_amt, date);
         }
-        else if (rsis > this->config.indicator_params.rsi_sell_threshold && short_sma < long_sma) //sell it all
+        else if (rsis > this->config.indicator_params.rsi_sell_threshold && sma > ticker_price) //sell it all
         {
             double ticker_shares = ptf->get_ticker_shares(ticker, date);
             this->ptf->sell(ticker_yt, ticker_shares, date);

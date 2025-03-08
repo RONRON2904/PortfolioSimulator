@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <random>
+#include <fstream>
 
 size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp){
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -114,17 +115,39 @@ std::string get_ticker_str_data(std::string ticker, std::string start_date, std:
     return response_buffer;
 }
 
+void remove_null_values_indexes(std::vector<nlohmann::json>& json_list_values){
+    std::vector<std::size_t> removed_index;
+    for (auto &json : json_list_values) {
+        for (std::size_t i = 0; i < json.size(); ++i) {
+            if (json[i].is_null() && std::find(removed_index.begin(), removed_index.end(), i) == removed_index.end()) {
+                std::cout << "NULL ELEMENTS FOUND" << std::endl;
+                removed_index.push_back(i);
+                for (auto& inner_json : json_list_values) {
+                    inner_json.erase(inner_json.begin() + i); // Erase the element at index i
+                }
+            }
+        }
+    }
+}
+
 YahooTimeseries get_ticker_ts_data(std::string ticker_str_data){
     nlohmann::json json_object = nlohmann::json::parse(ticker_str_data);
+    nlohmann::json json_fields = json_object["chart"]["result"][0];
+    std::vector<nlohmann::json> json_list_values = {json_fields["timestamp"], 
+                                                    json_fields["indicators"]["quote"][0]["open"], 
+                                                    json_fields["indicators"]["quote"][0]["low"], 
+                                                    json_fields["indicators"]["quote"][0]["high"], 
+                                                    json_fields["indicators"]["quote"][0]["close"], 
+                                                    json_fields["indicators"]["adjclose"][0]["adjclose"]};
+    remove_null_values_indexes(json_list_values);
 
-    // Accessing values
     std::string ticker = json_object["chart"]["result"][0]["meta"]["symbol"];
-    std::vector<std::time_t> dates = json_object["chart"]["result"][0]["timestamp"];
-    std::vector<double> opens = json_object["chart"]["result"][0]["indicators"]["quote"][0]["open"];
-    std::vector<double> lows = json_object["chart"]["result"][0]["indicators"]["quote"][0]["low"];
-    std::vector<double> highs = json_object["chart"]["result"][0]["indicators"]["quote"][0]["high"];
-    std::vector<double> closes = json_object["chart"]["result"][0]["indicators"]["quote"][0]["close"];
-    std::vector<double> adjcloses = json_object["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"];
+    std::vector<std::time_t> dates = json_list_values[0];
+    std::vector<double> opens = json_list_values[1];
+    std::vector<double> lows = json_list_values[2];
+    std::vector<double> highs = json_list_values[3];
+    std::vector<double> closes = json_list_values[4];
+    std::vector<double> adjcloses =  json_list_values[5];
 
     YahooTimeseries yt = {ticker, dates, opens, lows, highs, closes, adjcloses};
     std::map<std::time_t, double> dividend_map;
@@ -304,4 +327,17 @@ bool contains_all_tickers_yt_vectors(const std::vector<YahooTimeseries>& all_tic
         }
     }
     return true;
+}
+
+nlohmann::json read_json_file(std::string json_filepath)
+{
+    std::ifstream file(json_filepath); // Open the file
+    if (!file) {
+        std::cerr << "Error: Unable to open file " << json_filepath << std::endl;
+        return;
+    }
+
+    nlohmann::json json;
+    file >> json;
+    return json;
 }
