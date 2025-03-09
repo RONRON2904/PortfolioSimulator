@@ -1,10 +1,32 @@
 #include "../headers/yahoo_finance.hpp"
 #include "../headers/strategy.hpp"
+#include "../headers/input_handler.hpp"
+#include <iostream>
 
 // g++ *.cpp -o main -lcurl
 // g++ -fopenmp *.cpp -o main -lcurl -lmpi for parallelized version
 
 int main(int argc, char* argv[])
+{
+    UserInputHandler *inputs = new UserInputHandler(argc, argv);
+    GeneralParameters global_params = inputs->get_general_parameters();
+    RecurrentInvestmentParameters rinv_params = inputs->get_rinv_parameters();
+    RiskParameters risk_params = inputs->get_risk_parameters();
+    TechnicalIndicators techind_params = inputs->get_technical_indicators();
+
+    StrategyConfig config(global_params, rinv_params, risk_params, techind_params);
+    CustomStrategy *strat = new CustomStrategy(config);
+
+    strat->run_strategy();
+    strat->save_end_portfolio(config.global_params.strategy_name);
+
+    delete inputs;
+    delete strat;
+    return EXIT_SUCCESS;
+}
+
+/* PREVIOUS MAIN
+int main()
 {
     std::vector<std::string> tickers = {"AAPL", "EGLN.L", "CSSPX.MI"};
     YahooFinance *yf = new YahooFinance(tickers, "2010-06-01", "2025-03-04", "1d");
@@ -28,4 +50,4 @@ int main(int argc, char* argv[])
     delete strat;
 
     return EXIT_SUCCESS;
-}
+}*/

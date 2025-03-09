@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./main --all_tickers=[EGLN.L,CSSPX.MI] --start_date=2010-06-01 --end_date=2025-03-04 --strategy_name=DCA_UserInputs --starting_amount=81200.0 --monthly_deposit_amount=2500.0 --fees_per_trade=1.0 --flat_tax=0.3 --reinvestment_policy=true --rinv_tickers=[EGLN.L,CSSPX.MI] --rinv_starting_amount=81200.0 --rinv_investment_amount=2500.0 --rinv_investment_nb_months_frequency=1 --rinv_investment_montly_weeknum=0 --rinv_investment_week_day=1 --rinv_rebalancing_threshold=0.02 --rinv_rebalancing_freq_nb_day=90 --rinv_assets_desired_pct_allocations=[EGLN.L:0.20,CSSPX.MI:0.80] 

@@ -334,10 +334,69 @@ nlohmann::json read_json_file(std::string json_filepath)
     std::ifstream file(json_filepath); // Open the file
     if (!file) {
         std::cerr << "Error: Unable to open file " << json_filepath << std::endl;
-        return;
+        exit(0);
     }
 
     nlohmann::json json;
     file >> json;
     return json;
+}
+
+std::vector<std::string> parse_string_list(const std::string& input){
+    std::vector<std::string> result;
+    if (input.empty() || input[0] != '[' || input[input.size() - 1] != ']')
+        return result;
+    std::string cleaned = input.substr(1, input.size() - 2);  // Remove '[' and ']'
+
+    std::stringstream ss(cleaned);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        // Trim leading and trailing spaces
+        token.erase(0, token.find_first_not_of(" \t"));
+        token.erase(token.find_last_not_of(" \t") + 1);
+
+        result.push_back(token);
+    }
+
+    return result;
+}
+
+std::map<std::string, double> parse_string_map(const std::string& input){
+    std::map<std::string, double> result;
+
+    // Remove surrounding brackets
+    std::string cleaned = input.substr(1, input.size() - 2);
+
+    std::stringstream ss(cleaned);
+    std::string pair;
+
+    while (std::getline(ss, pair, ',')) {
+        // Trim leading and trailing spaces
+        pair.erase(0, pair.find_first_not_of(" \t"));
+        pair.erase(pair.find_last_not_of(" \t") + 1);
+
+        // Find the separator ':'
+        size_t pos = pair.find(':');
+        if (pos != std::string::npos) {
+            std::string key = pair.substr(0, pos);
+            std::string value_str = pair.substr(pos + 1);
+
+            // Trim spaces again
+            key.erase(0, key.find_first_not_of(" \t"));
+            key.erase(key.find_last_not_of(" \t") + 1);
+            value_str.erase(0, value_str.find_first_not_of(" \t"));
+            value_str.erase(value_str.find_last_not_of(" \t") + 1);
+
+            // Convert value to double
+            try {
+                double value = std::stod(value_str);
+                result[key] = value;
+            } catch (const std::exception& e) {
+                std::cerr << "Error converting '" << value_str << "' to double: " << e.what() << std::endl;
+            }
+        }
+    }
+
+    return result;
 }
