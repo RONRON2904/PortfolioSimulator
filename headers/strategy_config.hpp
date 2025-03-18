@@ -28,7 +28,7 @@ struct GeneralParameters
 
 struct RecurrentInvestmentParameters
 {
-    const std::vector<YahooTimeseries> &rinv_tickers_yt;
+    const std::vector<YahooTimeseries> rinv_tickers_yt;
     double starting_amount = 0.0;
     double recurrent_investment_amount = 0.0;
     size_t investment_nb_months_frequency = 0; // invest every x months
@@ -36,7 +36,7 @@ struct RecurrentInvestmentParameters
     size_t investment_week_day = 0;  // invest on which week day ?
     double rebalancing_threshold = 0.0;
     size_t rebalancing_freq = 0;
-    const std::map<std::string, double> &assets_desired_pct_allocations;
+    const std::map<std::string, double> assets_desired_pct_allocations;
 
     RecurrentInvestmentParameters();
     RecurrentInvestmentParameters(const std::vector<YahooTimeseries> &rinv_tickers_yt,
@@ -73,8 +73,7 @@ struct TechnicalIndicators
     const std::vector<YahooTimeseries> &sma_tickers_yt;
     const std::vector<YahooTimeseries> &rsi_sma_tickers_yt; // for applying both rsi & sma conditions before buying / selling an asset
     size_t rsi_period = 0;
-    size_t long_sma_period = 0;
-    size_t short_sma_period = 0;
+    size_t sma_period = 0;
     double rsi_buy_threshold = 0.0;
     double rsi_sell_threshold = 0.0;
     double rsi_starting_amount = 0.0;
@@ -86,16 +85,14 @@ struct TechnicalIndicators
                         const std::vector<YahooTimeseries> &sma_tickers_yt,
                         const std::vector<YahooTimeseries> &rsi_sma_tickers_yt, // for applying both rsi & sma conditions before buying / selling an asset
                         size_t rsi_period,
-                        size_t long_sma_period,
-                        size_t short_sma_period,
+                        size_t sma_period,
                         double rsi_buy_threshold,
                         double rsi_sell_threshold,
                         double rsi_starting_amount,
                         double sma_starting_amount,
                         double rsi_sma_starting_amount);
 
-    std::map<std::string, std::map<time_t, double>> tech_ind_short_sma_values;
-    std::map<std::string, std::map<time_t, double>> tech_ind_long_sma_values;
+    std::map<std::string, std::map<time_t, double>> tech_ind_sma_values;
     std::map<std::string, std::map<time_t, double>> tech_ind_rsi_values;
 };
 

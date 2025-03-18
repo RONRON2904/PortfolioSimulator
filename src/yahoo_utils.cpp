@@ -89,8 +89,6 @@ std::string get_ticker_str_data(std::string ticker, std::string start_date, std:
                     + "&interval=" + freq
                     + "&events=div";
 
-    std::cout << url << std::endl;
-
     CURL* curl = curl_easy_init();
     std::string response_buffer;
     if (curl) {
@@ -120,7 +118,6 @@ void remove_null_values_indexes(std::vector<nlohmann::json>& json_list_values){
     for (auto &json : json_list_values) {
         for (std::size_t i = 0; i < json.size(); ++i) {
             if (json[i].is_null() && std::find(removed_index.begin(), removed_index.end(), i) == removed_index.end()) {
-                std::cout << "NULL ELEMENTS FOUND" << std::endl;
                 removed_index.push_back(i);
                 for (auto& inner_json : json_list_values) {
                     inner_json.erase(inner_json.begin() + i); // Erase the element at index i

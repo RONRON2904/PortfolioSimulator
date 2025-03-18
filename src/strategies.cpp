@@ -28,7 +28,7 @@ void CustomStrategy::make_transactions(std::time_t date)
         this->config.rinv_params.last_rebalancing_nb_days++;
 }
 
-void CustomStrategy::run_strategy()
+nlohmann::json CustomStrategy::run_strategy()
 {
     std::vector<std::time_t> dates = get_unique_dates(this->config.global_params.all_tickers_yt);
     this->ptf->deposit(this->config.global_params.starting_amount, dates.front());
@@ -41,6 +41,7 @@ void CustomStrategy::run_strategy()
         this->make_transactions(date);
     }
     this->ptf->set_portfolio_values_and_prices();
+    return this->ptf->get_portfolio_backtest_data();
 }
 
 const std::map<std::time_t, double> CustomStrategy::get_strategy_values() const
@@ -109,7 +110,7 @@ void CustomStrategy::save_end_portfolio(std::string filename)
     double tr = 100 * this->get_strategy_total_returns();
     double xirr = 100 * this->get_strategy_extended_internal_return_rate(1e-3, 1000);
     double ptf_end_value = this->ptf->get_portfolio_values().rbegin()->second;
-    std::cout << "Strategy " + this->config.global_params.strategy_name + " Total Returns: " << std::ceil(tr * 100.0) / 100.0 << "% - Internal Rate of Return: " << std::ceil(xirr * 100.0) / 100.0 << "%" << " Portfolio End Value: " << ptf_end_value << std::endl;
+    //std::cout << "Strategy " + this->config.global_params.strategy_name + " Total Returns: " << std::ceil(tr * 100.0) / 100.0 << "% - Internal Rate of Return: " << std::ceil(xirr * 100.0) / 100.0 << "%" << " Portfolio End Value: " << ptf_end_value << std::endl;
 }
 
 const YahooTimeseries CustomStrategy::montecarlo_simulation(const std::vector<std::time_t> &future_dates)
@@ -163,16 +164,15 @@ CustomStrategy::~CustomStrategy()
 
 void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
 {
-    if (this->config.rinv_params.recurrent_investment_amount > 0)
+    for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
     {
-        for (auto &ticker_yt : this->config.rinv_params.rinv_tickers_yt)
+        std::string ticker = ticker_yt.get_ticker();
+        double ticker_value = ticker_yt.get_closes().get_ts_value(date);
+        if (this->config.rinv_params.recurrent_investment_amount >= 0)
         {
-            std::string ticker = ticker_yt.get_ticker();
-            
             std::vector<std::time_t> ticker_invest_dates = this->config.rinv_params.tickers_rinvestment_dates[ticker]; //this->config.tickers_rinvestment_dates[ticker];
             double alloc_pct = this->config.rinv_params.assets_desired_pct_allocations.at(ticker);
 
-            double ticker_value = ticker_yt.get_closes().get_ts_value(date);
             double shares_amt = 0.0;
             double amount = alloc_pct * this->config.rinv_params.recurrent_investment_amount;
 
@@ -184,19 +184,17 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
                     this->config.rinv_params.rinv_assets_starting_amounts[ticker] = 0; //this->config.rinv_assets_starting_amounts[ticker] = 0;
                 }
                 shares_amt = amount / ticker_value;
-                if (shares_amt > 0  && this->ptf->get_cash_amount(date) > 0.01){
-                    //this->ptf->deposit(amount, date);
+                if (shares_amt > 0  && this->ptf->get_cash_amount(date) > 0.01)
                     this->ptf->buy(ticker_yt, shares_amt, date);
-                }
             }
-
-            std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
-
-            if (dividends.size() > 0 && dividends.find(date) != dividends.end())
-            {
-                shares_amt = this->config.global_params.flat_tax * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
+        }
+        std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
+        if (dividends.size() > 0 && dividends.find(date) != dividends.end())
+        {   
+            double shares_amt = (1 - this->config.global_params.flat_tax) * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
+            this->ptf->deposit(shares_amt * ticker_value, date);
+            if (this->config.global_params.reinvestment_policy == true)
                 this->ptf->buy(ticker_yt, shares_amt, date);
-            }
         }
     }
 }

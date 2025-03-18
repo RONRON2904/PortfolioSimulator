@@ -82,6 +82,12 @@
         "complex": "cpp",
         "unordered_set": "cpp",
         "fstream": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "__string": "cpp",
+        "__memory": "cpp",
+        "csignal": "cpp",
+        "charconv": "cpp",
+        "regex": "cpp",
+        "ranges": "cpp"
     }
 }

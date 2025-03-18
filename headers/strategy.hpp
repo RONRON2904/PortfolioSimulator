@@ -9,7 +9,7 @@ class CustomStrategy
 public:
     explicit CustomStrategy(StrategyConfig &config);
     void make_transactions(std::time_t date);
-    void run_strategy();
+    nlohmann::json run_strategy();
 
     const std::map<std::time_t, double> get_strategy_values() const;
     double get_strategy_total_returns() const;

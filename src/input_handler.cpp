@@ -55,6 +55,45 @@ UserInputHandler::UserInputHandler(int argc, char* argv[])
         ASSERT_WITH_MSG(correct_param, error_message);
     }
     std::vector<std::string> all_tickers_list = parse_string_list(this->general_param_args["all_tickers"]);
+    assert(all_tickers_list.size() >= 1 && "At least one ticker is required. \n");
+    YahooFinance *yf = new YahooFinance(all_tickers_list, this->general_param_args["start_date"], this->general_param_args["end_date"], "1d");
+    this->tickers_ts_data = yf->get_tickers_ts_data();
+    delete yf;
+}
+
+UserInputHandler::UserInputHandler(nlohmann::json args){
+    nlohmann::json allowed_params = read_json_file("../allowed_params.json");
+    std::set<std::string> general_params_allowed_list = allowed_params["GeneralParameters"];
+    std::set<std::string> rinv_params_allowed_list = allowed_params["RecurrentInvestmentParameters"];
+    std::set<std::string> risk_params_allowed_list = allowed_params["RiskParameters"];
+    std::set<std::string> techind_params_allowed_list = allowed_params["TechnicalIndicators"];
+    for (auto& [key, value] : args.items())
+    {
+        bool correct_param = false;
+        if (std::find(allowed_params["GeneralParameters"].begin(), allowed_params["GeneralParameters"].end(), key) != allowed_params["GeneralParameters"].end())
+        {
+            this->general_param_args[key] = value;
+            correct_param = true;
+        }
+        else if (std::find(allowed_params["RecurrentInvestmentParameters"].begin(), allowed_params["RecurrentInvestmentParameters"].end(), key) != allowed_params["RecurrentInvestmentParameters"].end())
+        {
+            this->rinv_param_args[key] = value;
+            correct_param = true;
+        }
+        else if (std::find(allowed_params["RiskParameters"].begin(), allowed_params["RiskParameters"].end(), key) != allowed_params["RiskParameters"].end())
+        {
+            this->risk_param_args[key] = value;
+            correct_param = true;
+        }
+        else if (std::find(allowed_params["TechnicalIndicators"].begin(), allowed_params["TechnicalIndicators"].end(), key) != allowed_params["TechnicalIndicators"].end())
+        {
+            this->techind_param_args[key] = value;
+            correct_param = true;
+        }
+        std::string error_message = fmt::format("Parameter {} is not recognized", key).c_str();
+        ASSERT_WITH_MSG(correct_param, error_message);
+    }
+    std::vector<std::string> all_tickers_list = parse_string_list(this->general_param_args["all_tickers"]);
     assert(all_tickers_list.size() > 1 && "At least one ticker is required. \n");
     YahooFinance *yf = new YahooFinance(all_tickers_list, this->general_param_args["start_date"], this->general_param_args["end_date"], "1d");
     this->tickers_ts_data = yf->get_tickers_ts_data();

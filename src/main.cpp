@@ -3,7 +3,7 @@
 #include "../headers/input_handler.hpp"
 #include <iostream>
 
-// g++ *.cpp -o main -lcurl
+// g++ -g -fopenmp yahoo_*.cpp strateg*.cpp input_handler.cpp portfolio_builder.cpp main.cpp -o main -lcurl -lmpi -lfmt
 // g++ -fopenmp *.cpp -o main -lcurl -lmpi for parallelized version
 
 int main(int argc, char* argv[])
@@ -17,8 +17,11 @@ int main(int argc, char* argv[])
     StrategyConfig config(global_params, rinv_params, risk_params, techind_params);
     CustomStrategy *strat = new CustomStrategy(config);
 
-    strat->run_strategy();
+    nlohmann::json json_res = strat->run_strategy();
     strat->save_end_portfolio(config.global_params.strategy_name);
+    //strat->run_montecarlo_simulations(1000);
+    
+    std::cout << json_res.dump() << std::endl;
 
     delete inputs;
     delete strat;

@@ -69,6 +69,7 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
             this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second + shares_amt;
         this->historical_cash[date] = this->historical_cash.rbegin()->second - expense;
     }
+    /*
     else{
         fprintf(stderr, "not enough cash available to buy this volume of shares\n");
         std::cout << unix_timestamp_to_date_string(date) << std::endl;
@@ -76,6 +77,7 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
         std::cout << expense << std::endl;
         std::cout << this->get_cash_amount(date) << std::endl;
     }
+    */
 }
 
 void PortfolioBuilder::sell(const YahooTimeseries &ticker_yt, double shares_amt, std::time_t date)
@@ -127,12 +129,30 @@ void PortfolioBuilder::save_portfolio(std::string filename) const
             double cash = std::round(this->get_cash_amount(pair.first) * 100.0) / 100.0;
             if (ptf_pls_ts_values[pair.first] == 0)
                 ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << last_pls << ";" << pair.second - last_pls << ";" << cash << std::endl;
-            else
-                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << ";" << pair.second - ptf_pls_ts_values[pair.first] << ";" << cash << std::endl;
-            last_pls = ptf_pls_ts_values[pair.first];
+            else{
+                last_pls = ptf_pls_ts_values[pair.first];
+                ptf_file << unix_timestamp_to_date_string(pair.first) << ";" << pair.second << ";" << ptf_pls_ts_values[pair.first] << ";" << pair.second - last_pls << ";" << cash << std::endl;
+            }
         }
         ptf_file.close();
     }
+}
+
+nlohmann::json PortfolioBuilder::get_portfolio_backtest_data() const
+{
+    std::map<std::time_t, double> ptf_ts_values = this->get_portfolio_values();
+    nlohmann::json json_result;
+    for (const auto &pair : ptf_ts_values)
+    {
+        double cash = std::round(this->get_cash_amount(pair.first) * 100.0) / 100.0;
+        std::string date = unix_timestamp_to_date_string(pair.first);
+        double value =  std::round(pair.second * 100.0) / 100.0;
+        json_result.push_back({
+            {"time", date},
+            {"value", value}
+        });
+    }
+    return json_result;
 }
 
 double PortfolioBuilder::get_cash_amount(std::time_t date) const
@@ -388,7 +408,7 @@ Timeseries PortfolioBuilder::get_portfolio_profits_and_losses() const
     {
         double date_pl_value = 0.0;
         for (auto &asset_pl_ts_value : tickers_pl_ts_values)
-            date_pl_value += asset_pl_ts_value[dt];
+            date_pl_value += asset_pl_ts_value.lower_bound(dt)->second;
         pl_values.push_back(date_pl_value);
     }
     return Timeseries(unique_dates, pl_values);
