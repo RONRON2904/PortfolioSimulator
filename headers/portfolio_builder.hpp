@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <nlohmann/json.hpp>
 #include "./yahoo_timeseries.hpp"
 
 struct AssetHolding {
@@ -27,7 +26,6 @@ public:
     void sell(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void set_portfolio_values_and_prices();
     void save_portfolio(std::string filename) const;
-    nlohmann::json get_portfolio_backtest_data() const;
 
     double get_cash_amount(std::time_t date) const;
     double get_ticker_value(std::string ticker, std::time_t date) const;

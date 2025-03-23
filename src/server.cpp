@@ -9,14 +9,10 @@
 nlohmann::json getJsonBacktestParams(const nlohmann::json& client_json)
 {
     nlohmann::json json_backtest_params;
-    std::string start_date = client_json["startDate"];
-    std::string end_date = client_json["endDate"];
-    std::string cleaned_start_date = start_date.substr(0, 10); // Remove time portion of the start date
-    std::string cleaned_end_date = end_date.substr(0, 10); // Remove time portion of the end date
 
     json_backtest_params["portfolio_name"] = client_json["portfolioName"];
-    json_backtest_params["start_date"] = cleaned_start_date;
-    json_backtest_params["end_date"] = cleaned_end_date;
+    json_backtest_params["start_date"] = client_json["startDate"];
+    json_backtest_params["end_date"] = client_json["endDate"];
     json_backtest_params["starting_amount"] = client_json["startingAmount"];
     json_backtest_params["monthly_deposit_amount"] = client_json["monthlyDeposit"];
     json_backtest_params["rinv_starting_amount"] = client_json["recurrentInvestmentAmount"];
@@ -26,28 +22,13 @@ nlohmann::json getJsonBacktestParams(const nlohmann::json& client_json)
     json_backtest_params["rinv_rebalancing_threshold"] = client_json["rinvRebalancingThreshold"];
     json_backtest_params["rinv_rebalancing_freq_nb_day"] = client_json["rinvRebalancingFreqMinNbDays"];
     json_backtest_params["reinvestment_policy"] = client_json["reinvestmentPolicy"];
+    std::cout << json_backtest_params << std::endl;
 
-    std::ostringstream alloc_str;
-    std::ostringstream rinv_tickers_str;
-    alloc_str << "[";
-    rinv_tickers_str << "[";
-    bool first = true;
-    
-    for (auto it = client_json["rinvAllocations"].begin(); it != client_json["rinvAllocations"].end(); ++it) {
-        if (!first) {
-            alloc_str << ",";  // Add comma separator
-            rinv_tickers_str << ",";
-        }
-        alloc_str << it.key() << ":" << it.value();
-        rinv_tickers_str << it.key();
-        first = false;
-    }
-    alloc_str << "]";
-    rinv_tickers_str << "]";
+    json_backtest_params["rinv_assets_desired_pct_allocations"] = client_json["rinvAllocations"];
+    json_backtest_params["rinv_tickers"] = client_json["assets"];
+    json_backtest_params["all_tickers"] = client_json["assets"]; //TODO: Adapt the code accordingly to add risk, technical ind tickers
 
-    json_backtest_params["rinv_assets_desired_pct_allocations"] = alloc_str.str();
-    json_backtest_params["rinv_tickers"] = rinv_tickers_str.str();
-    json_backtest_params["all_tickers"] = rinv_tickers_str.str(); //TODO: Adapt the code accordingly to add risk, technical ind tickers
+    std::cout << json_backtest_params << std::endl;
 
     return json_backtest_params;
 }
@@ -58,7 +39,8 @@ std::string runBacktest(const nlohmann::json& client_json) {
     nlohmann::json json_backtest_params = getJsonBacktestParams(client_json);
     // Construct the command with the cleaned arguments
     std::ostringstream command;
-    command << "./main --strategy_name=DCA_UserInputs --fees_per_trade=1.0 --flat_tax=0.3 "
+    command << "./main --nb_strat=2  --fees_per_trade=[1.0,1.0] --flat_tax=[0.3,0.3] "
+            << "--strategy_name=" << json_backtest_params["portfolio_name"] << " "
             << "--all_tickers=" << json_backtest_params["all_tickers"] << " "
             << "--start_date=" <<  json_backtest_params["start_date"] << " "
             << "--end_date=" << json_backtest_params["end_date"] << " "

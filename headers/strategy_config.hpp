@@ -8,7 +8,7 @@
 
 struct GeneralParameters
 {
-    const std::vector<YahooTimeseries> &all_tickers_yt;
+    const std::vector<YahooTimeseries> all_tickers_yt;
     std::string strategy_name;
     double starting_amount;
     double monthly_deposit_amount;

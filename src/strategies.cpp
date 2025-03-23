@@ -28,7 +28,7 @@ void CustomStrategy::make_transactions(std::time_t date)
         this->config.rinv_params.last_rebalancing_nb_days++;
 }
 
-nlohmann::json CustomStrategy::run_strategy()
+std::map<time_t, double> CustomStrategy::run_strategy()
 {
     std::vector<std::time_t> dates = get_unique_dates(this->config.global_params.all_tickers_yt);
     this->ptf->deposit(this->config.global_params.starting_amount, dates.front());
@@ -41,7 +41,7 @@ nlohmann::json CustomStrategy::run_strategy()
         this->make_transactions(date);
     }
     this->ptf->set_portfolio_values_and_prices();
-    return this->ptf->get_portfolio_backtest_data();
+    return this->ptf->get_portfolio_values();
 }
 
 const std::map<std::time_t, double> CustomStrategy::get_strategy_values() const
@@ -191,10 +191,11 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
         std::map<std::time_t, double> dividends = ticker_yt.get_dividends().get_ts_values();
         if (dividends.size() > 0 && dividends.find(date) != dividends.end())
         {   
-            double shares_amt = (1 - this->config.global_params.flat_tax) * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
-            this->ptf->deposit(shares_amt * ticker_value, date);
-            if (this->config.global_params.reinvestment_policy == true)
+            if (this->config.global_params.reinvestment_policy == true){
+                double shares_amt = (1 - this->config.global_params.flat_tax) * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
+                this->ptf->deposit(shares_amt * ticker_value, date);
                 this->ptf->buy(ticker_yt, shares_amt, date);
+            }
         }
     }
 }

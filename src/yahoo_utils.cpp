@@ -397,3 +397,101 @@ std::map<std::string, double> parse_string_map(const std::string& input){
 
     return result;
 }
+
+std::vector<std::string> parse_string_array(const std::string& input) {
+    std::vector<std::string> result;
+
+    // Ensure the input is well-formed
+    if (input.size() < 2 || input.front() != '[' || input.back() != ']') {
+        throw std::invalid_argument("Invalid format: Expected [val1, val2]");
+    }
+
+    // Extract the inner content (remove the outer '[' and ']')
+    std::string content = input.substr(1, input.size() - 2);
+    std::string current_token;
+    int bracket_depth = 0;
+
+    for (char ch : content) {
+        if (ch == '[') {
+            bracket_depth++;
+        } else if (ch == ']') {
+            bracket_depth--;
+        }
+
+        if (ch == ',' && bracket_depth == 0) {
+            // Push the current token when we reach a top-level comma
+            current_token.erase(0, current_token.find_first_not_of(" \t")); // Trim leading spaces
+            current_token.erase(current_token.find_last_not_of(" \t") + 1); // Trim trailing spaces
+            if (!current_token.empty()) {
+                result.push_back(current_token);
+            }
+            current_token.clear();
+        } else {
+            current_token += ch;
+        }
+    }
+
+    // Add the last token
+    current_token.erase(0, current_token.find_first_not_of(" \t"));
+    current_token.erase(current_token.find_last_not_of(" \t") + 1);
+    if (!current_token.empty()) {
+        result.push_back(current_token);
+    }
+
+    return result;
+}
+
+std::vector<std::string> parse_string_array2(const std::string& input){
+    std::vector<std::string> result;
+
+    // Ensure the input is well-formed
+    if (input.size() < 2 || input.front() != '[' || input.back() != ']') {
+        throw std::invalid_argument("Invalid format: Expected [val1, val2]");
+    }
+
+    // Extract the inner content (remove '[' and ']')
+    std::string content = input.substr(1, input.size() - 2);
+
+    std::stringstream ss(content);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        // Trim leading and trailing spaces
+        token.erase(0, token.find_first_not_of(" \t"));
+        token.erase(token.find_last_not_of(" \t") + 1);
+        result.push_back(token);
+    }
+
+    return result;
+}
+
+std::set<std::string> flatten_to_set(const std::vector<std::vector<std::string>>& list_of_lists){
+    std::set<std::string> result;
+
+    for (const auto& sublist : list_of_lists) {
+        for (const auto& item : sublist) {
+            result.insert(item); // Insert each item into the set
+        }
+    }
+
+    return result;
+}
+
+double get_closest_value(std::time_t date, const std::map<std::time_t, double>& values_map){
+    auto it = values_map.find(date);
+    
+    if (it != values_map.end()) {
+        return it->second;
+    }
+
+    auto lower = values_map.lower_bound(date);
+    if (lower != values_map.end() && lower == values_map.begin()) 
+            return lower->second;
+
+    if (lower != values_map.begin()) {
+        auto prev = std::prev(lower);
+        return prev->second;
+    }
+
+    return 0.0;
+}

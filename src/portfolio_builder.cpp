@@ -138,23 +138,6 @@ void PortfolioBuilder::save_portfolio(std::string filename) const
     }
 }
 
-nlohmann::json PortfolioBuilder::get_portfolio_backtest_data() const
-{
-    std::map<std::time_t, double> ptf_ts_values = this->get_portfolio_values();
-    nlohmann::json json_result;
-    for (const auto &pair : ptf_ts_values)
-    {
-        double cash = std::round(this->get_cash_amount(pair.first) * 100.0) / 100.0;
-        std::string date = unix_timestamp_to_date_string(pair.first);
-        double value =  std::round(pair.second * 100.0) / 100.0;
-        json_result.push_back({
-            {"time", date},
-            {"value", value}
-        });
-    }
-    return json_result;
-}
-
 double PortfolioBuilder::get_cash_amount(std::time_t date) const
 {
     double cash_amount = 0.0;
@@ -267,7 +250,7 @@ double PortfolioBuilder::get_portfolio_value(std::time_t date) const
     {
         global_value += this->get_ticker_value(asset.ticker_yt.get_ticker(), date);
     }
-    return global_value;
+    return std::round(global_value * 100.0) / 100.0;
 }
 
 double PortfolioBuilder::get_portfolio_total_shares(std::time_t date) const

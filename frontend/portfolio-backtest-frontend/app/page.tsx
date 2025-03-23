@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, TrendingUp, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
