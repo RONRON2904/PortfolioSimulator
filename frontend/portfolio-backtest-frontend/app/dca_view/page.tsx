@@ -1,6 +1,99 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Plus, Play, PlusCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import StrategySettings from "@/components/dca/strategy-settings";
+import PortfolioAssets from "@/components/dca/portfolio-assets";
+import BacktestResultsChart from "@/components/dca/backtest-graph";
+import { handleRunBacktest } from "@/app/run-backtest";
+
+export default function PortfolioConfig() {
+  const emptyStrategy = { portfolioName: "",
+                          startDate: "",
+                          endDate: "",
+                          initialAmount: "",
+                          monthlyDeposit: "",
+                          reinvestmentPolicy: "",
+                          recurrentInvestmentAmount: "",
+                          rinvInvestmentNbMonthsFrequency: "",
+                          rinvInvestmentMonthlyWeekNum: "",
+                          rinvInvestmentWeekDay: "",
+                          rinvRebalancingThreshold: "",
+                          rinvRebalancingFreqMinNbDays: "",
+                          assets: Array(3).fill({ symbol: "", allocation: "" }) 
+                        };
+    const [strategies, setStrategies] = useState([{ ...emptyStrategy }]);
+    const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
+    const [results, setResults] = useState([
+      { time: "2025-01-01", portfolio1: 500, portfolio2: 500 },
+      { time: "2025-02-01", portfolio1: 1500, portfolio2: 300 },
+      { time: "2025-03-01", portfolio1: 1000, portfolio2: 1000 },
+      { time: "2025-04-01", portfolio1: 1800, portfolio2: 2500 },
+      { time: "2025-05-01", portfolio1: 1400, portfolio2: 1000 },
+      { time: "2025-06-01", portfolio1: 2500, portfolio2: 3500 },
+    ]);
+    const [showGraph, setShowGraph] = useState(false);
+    const [activeTab, setActiveTab] = useState("settings");
+  
+    useEffect(() => {
+      setAvailableSymbols(["AAPL", "GOOGL", "MSFT","TSLA","AMZN","CSSPX.MI","IDUS.L","EGLN.L","HPQ","TTE.PA","WMT","NVDA"]);
+    }, []);
+  
+    const addNewStrategy = () => {
+      setStrategies([...strategies, { ...emptyStrategy }]);
+    };
+  
+    return (
+      <div className="p-4 max-w-7xl mx-auto">
+        <Card className="shadow-lg">
+          <CardContent className="p-6 space-y-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex justify-between items-center mb-4">
+                <TabsList className="flex gap-2">
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
+                  <TabsTrigger value="portfolio-assets">Portfolio Assets</TabsTrigger>
+                </TabsList>
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={addNewStrategy}
+                    className="flex items-center gap-1 bg-blue-500 hover:bg-blue-400 text-white px-1 py-1"
+                  >
+                    <PlusCircle size={18} />
+                    <span>Add Strategy</span>
+                  </Button>
+                </div>
+              </div>
+  
+              <TabsContent value="settings">
+                <StrategySettings strategies={strategies} setStrategies={setStrategies}/>
+              </TabsContent>
+  
+              <TabsContent value="portfolio-assets">
+                <PortfolioAssets strategies={strategies} setStrategies={setStrategies} availableSymbols={availableSymbols}/>
+                <div className="flex justify-center mt-6">
+                  <Button
+                    onClick={() => handleRunBacktest(strategies, setResults, setShowGraph)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-2"
+                  >
+                    <Play size={18} />
+                    <span>Run Backtest</span>
+                  </Button>
+                </div>
+                {showGraph && <BacktestResultsChart results={results} />}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+
+/*
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -38,7 +131,7 @@ export default function PortfolioConfig() {
   { time: "2025-06-01", portfolio1: 2500, portfolio2: 3500 },
   ];
 
-  const [availableSymbols, setAvailableSymbols] = useState([]);
+  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
   const [results, setResults] = useState(mockData);
   const [showGraph, setShowGraph] = useState(true);
   const [activeTab, setActiveTab] = useState("settings");
@@ -55,7 +148,7 @@ export default function PortfolioConfig() {
     setStrategies([...strategies, { ...emptyStrategy }]);
   };
   
-  const updateSettings = (strategyIndex, field, value) => {
+  const updateSettings = (strategyIndex: number, field: string, value: string) => {
     setStrategies(prevStrategies => {
       const updatedStrategies = [...prevStrategies];
       updatedStrategies[strategyIndex] = {
@@ -66,7 +159,7 @@ export default function PortfolioConfig() {
     });
   };
 
-  const updateAsset = (strategyIndex, assetIndex, field, value) => {
+  const updateAsset = (strategyIndex: number, assetIndex: number, field: string, value: string) => {
     setStrategies(prevStrategies => {
       const updatedStrategies = [...prevStrategies];
       const updatedAssets = [...updatedStrategies[strategyIndex].assets];
@@ -79,7 +172,7 @@ export default function PortfolioConfig() {
     });
   };
 
-  const addAsset = (strategyIndex) => {
+  const addAsset = (strategyIndex: number) => {
     setStrategies(prevStrategies => {
       const updatedStrategies = [...prevStrategies];
       updatedStrategies[strategyIndex] = {
@@ -119,9 +212,6 @@ export default function PortfolioConfig() {
       )
     };
 
-    console.log("REQUESTED DATA");
-    console.log(JSON.stringify(requestData));
-    
     try {
       const response = await fetch("http://localhost:8080/run-backtest", {
         method: "POST",
@@ -135,7 +225,6 @@ export default function PortfolioConfig() {
       if (!response.ok) {
         throw new Error(`HTTP Error ${response.status}: ${rawText}`);
       }
-      console.log("Raw response from backend:", rawText);
 
       const data = JSON.parse(rawText);
       console.log("Parsed JSON:", data);
@@ -368,7 +457,6 @@ export default function PortfolioConfig() {
                         <Tooltip />
                         <CartesianGrid strokeDasharray="3 3" />
                         
-                        {/* Dynamically generate lines for each portfolio */}
                         {portfolioKeys.map((portfolioKey, index) => (
                           <Line
                             key={portfolioKey}
@@ -393,7 +481,10 @@ export default function PortfolioConfig() {
       </Card>
     </div>
   );
-}
+}*/
+
+
+
 
 /*
 import React, { useState, useEffect } from "react";
