@@ -477,7 +477,7 @@ std::set<std::string> flatten_to_set(const std::vector<std::vector<std::string>>
     return result;
 }
 
-double get_closest_value(std::time_t date, const std::map<std::time_t, double>& values_map){
+std::vector<double> get_closest_value(std::time_t date, const std::map<std::time_t, std::vector<double>>& values_map){
     auto it = values_map.find(date);
     
     if (it != values_map.end()) {
@@ -493,5 +493,5 @@ double get_closest_value(std::time_t date, const std::map<std::time_t, double>& 
         return prev->second;
     }
 
-    return 0.0;
+    return {0.0, 0.0};
 }

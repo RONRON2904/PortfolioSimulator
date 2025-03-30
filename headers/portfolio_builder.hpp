@@ -22,6 +22,7 @@ public:
     const std::map<std::time_t, double>& get_portfolio_historical_cash_flow() const; 
 
     void deposit(double cash_amt, std::time_t date);
+    void withdraw(double cash_amt, std::time_t date);
     void buy(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void sell(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void set_portfolio_values_and_prices();
@@ -32,11 +33,14 @@ public:
     double get_ticker_shares(std::string ticker, std::time_t date) const;
     double get_ticker_expenses_value(std::string ticker, std::time_t date) const;
     double get_portfolio_value(std::time_t date) const;
+    double get_portfolio_cumulative_deposit(std::time_t date) const;
     double get_portfolio_total_shares(std::time_t date) const;
+    std::map<time_t, std::vector<double>> get_portfolio_values_and_pls() const;
 
     std::vector<std::time_t> get_unique_portfolio_dates() const;
     std::map<std::string, double> get_portfolio_percentage_allocations(std::time_t date) const;
     std::map<std::time_t, double> get_portfolio_values() const;
+    std::map<std::time_t, double> get_portfolio_cumulative_deposits() const;
     std::map<std::time_t, double> get_portfolio_historical_cash() const;
     
     Timeseries get_ticker_values(std::string ticker) const;
@@ -50,6 +54,7 @@ public:
 
 private:
     std::vector<struct AssetHolding> assets;
+    std::map<std::time_t, double> historical_cumulative_deposits;
     std::map<std::time_t, double> historical_cash_flow;
     std::map<std::time_t, double> portfolio_values;
     std::map<std::time_t, double> portfolio_total_shares;

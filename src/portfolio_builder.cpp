@@ -38,10 +38,19 @@ std::vector<std::time_t> PortfolioBuilder::get_unique_portfolio_dates() const
 
 void PortfolioBuilder::deposit(double cash_amt, std::time_t date)
 {
-    if (this->historical_cash.empty())
+    if (this->historical_cash.empty()){
         this->historical_cash = {{date, cash_amt}};
-    else
+        this->historical_cumulative_deposits = {{date, cash_amt}};
+    }
+    else {
         this->historical_cash[date] = this->historical_cash.rbegin()->second + cash_amt;
+        this->historical_cumulative_deposits[date] = this->historical_cumulative_deposits.rbegin()->second + cash_amt;
+    }
+}
+
+void PortfolioBuilder::withdraw(double cash_amt, std::time_t date){
+    if (this->get_cash_amount(date) >= cash_amt)
+        this->historical_cash[date] = this->historical_cash.rbegin()->second - cash_amt;
 }
 
 void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, std::time_t date)
@@ -182,7 +191,7 @@ double PortfolioBuilder::get_ticker_value(std::string ticker, std::time_t date) 
             --it;
         ticker_shares = it->second;
     }
-    return ticker_shares * asset->ticker_yt.get_closes().get_ts_value(date);
+    return round(ticker_shares * asset->ticker_yt.get_closes().get_ts_value(date) * 100.0) / 100.0;
 }
 
 double PortfolioBuilder::get_ticker_expenses_value(std::string ticker, std::time_t date) const
@@ -253,6 +262,27 @@ double PortfolioBuilder::get_portfolio_value(std::time_t date) const
     return std::round(global_value * 100.0) / 100.0;
 }
 
+double PortfolioBuilder::get_portfolio_cumulative_deposit(std::time_t date) const
+{
+    double cumulative_deposit = 0.0;
+    try
+    {
+        cumulative_deposit = this->historical_cumulative_deposits.at(date);
+    }
+    catch(const std::exception& e)
+    {
+        auto it = this->historical_cumulative_deposits.lower_bound(date);
+
+        if (it == this->historical_cumulative_deposits.begin() && it->first > date)
+            return 0.0;
+        if (it != this->historical_cumulative_deposits.begin())
+            --it;
+        cumulative_deposit = it->second;
+    }
+    
+    return cumulative_deposit;
+}
+
 double PortfolioBuilder::get_portfolio_total_shares(std::time_t date) const
 {
     double total_shares = 0.0;
@@ -314,9 +344,25 @@ std::map<std::time_t, double> PortfolioBuilder::get_portfolio_values() const
     return this->portfolio_values;
 }
 
+std::map<std::time_t, double> PortfolioBuilder::get_portfolio_cumulative_deposits() const
+{
+    return this->historical_cumulative_deposits;
+}
+
 std::map<std::time_t, double> PortfolioBuilder::get_portfolio_historical_cash() const
 {
     return this->historical_cash;
+}
+
+std::map<time_t, std::vector<double>> PortfolioBuilder::get_portfolio_values_and_pls() const {
+    std::map<std::time_t, double> ptf_values = this->get_ts_portfolio_values().get_ts_values();
+    std::map<std::time_t, double> ptf_pls_ts_values = this->get_portfolio_profits_and_losses().get_ts_values();
+    std::map<time_t, std::vector<double>> values_pls;
+    for (const auto &pair : ptf_values)
+    {
+        values_pls[pair.first] = {ptf_values[pair.first], ptf_pls_ts_values[pair.first]};
+    }
+    return values_pls;
 }
 
 Timeseries PortfolioBuilder::get_ticker_values(std::string ticker) const
@@ -382,17 +428,12 @@ Timeseries PortfolioBuilder::get_portfolio_profits_and_losses() const
         return Timeseries({}, {0.0});
 
     std::vector<double> pl_values;
-    std::vector<std::map<std::time_t, double>> tickers_pl_ts_values;
     std::vector<std::time_t> unique_dates = this->get_unique_portfolio_dates();
-    for (auto &asset : this->assets)
-        tickers_pl_ts_values.push_back(this->get_ticker_profits_and_losses(asset.ticker_yt.get_ticker()).get_ts_values());
 
     for (const auto &dt : unique_dates)
     {
-        double date_pl_value = 0.0;
-        for (auto &asset_pl_ts_value : tickers_pl_ts_values)
-            date_pl_value += asset_pl_ts_value.lower_bound(dt)->second;
-        pl_values.push_back(date_pl_value);
+        double date_pl_value = this->get_portfolio_value(dt) - this->get_portfolio_cumulative_deposit(dt); 
+        pl_values.push_back(std::round(date_pl_value * 100.0) / 100.0);
     }
     return Timeseries(unique_dates, pl_values);
 }

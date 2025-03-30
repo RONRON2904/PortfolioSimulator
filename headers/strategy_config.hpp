@@ -36,6 +36,10 @@ struct RecurrentInvestmentParameters
     size_t investment_week_day = 0;  // invest on which week day ?
     double rebalancing_threshold = 0.0;
     size_t rebalancing_freq = 0;
+    double withdraw_pct = 0.0;
+    size_t withdraw_nb_months_frequency = 0; // withdraw every x months
+    size_t withdraw_monthly_weeknum = 0; // withdraw on which week of the month 1...4 
+    size_t withdraw_week_day = 0;  // withdraw on which week day ?
     const std::map<std::string, double> assets_desired_pct_allocations;
 
     RecurrentInvestmentParameters();
@@ -47,9 +51,14 @@ struct RecurrentInvestmentParameters
                                   size_t investment_week_day,
                                   double rebalancing_threshold,
                                   size_t rebalancing_freq,
-                                  const std::map<std::string, double> &assets_desired_pct_allocations);
+                                  const std::map<std::string, double> &assets_desired_pct_allocations,
+                                  double withdraw_pct,
+                                  size_t withdraw_nb_months_frequency,
+                                  size_t withdraw_monthly_weeknum,
+                                  size_t withdraw_week_day);
     std::map<std::string, double> rinv_assets_starting_amounts;
     std::map<std::string, std::vector<std::time_t>> tickers_rinvestment_dates;
+    std::map<std::string, std::vector<std::time_t>> tickers_sell_dates_for_withdrawing;
     size_t last_rebalancing_nb_days;
 };
 

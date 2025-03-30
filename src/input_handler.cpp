@@ -116,11 +116,14 @@ std::vector<struct RecurrentInvestmentParameters> UserInputHandler::get_rinv_par
             }
         }
         
-        size_t investment_nb_months_frequency, investment_montly_weeknum, investment_week_day, rebalancing_freq;
+        size_t investment_nb_months_frequency, investment_montly_weeknum, investment_week_day, rebalancing_freq, withdraw_nb_months_frequency, withdraw_montly_weeknum, withdraw_week_day;
         std::string rinv_investment_nb_months_frequency = this->rinv_param_args[strat_j]["rinv_investment_nb_months_frequency"];
         std::string rinv_investment_montly_weeknum = this->rinv_param_args[strat_j]["rinv_investment_montly_weeknum"];
         std::string rinv_investment_week_day = this->rinv_param_args[strat_j]["rinv_investment_week_day"];
         std::string rinv_rebalancing_freq_nb_day = this->rinv_param_args[strat_j]["rinv_rebalancing_freq_nb_day"];
+        std::string rinv_withdraw_nb_months_frequency = this->rinv_param_args[strat_j]["rinv_withdrawal_nb_months_frequency"];
+        std::string rinv_withdraw_montly_weeknum = this->rinv_param_args[strat_j]["rinv_withdrawal_monthly_weeknum"];
+        std::string rinv_withdraw_week_day = this->rinv_param_args[strat_j]["rinv_withdrawal_week_day"];
         
         std::stringstream stream(rinv_investment_nb_months_frequency);
         stream >> investment_nb_months_frequency;
@@ -134,6 +137,15 @@ std::vector<struct RecurrentInvestmentParameters> UserInputHandler::get_rinv_par
         std::stringstream stream4(rinv_rebalancing_freq_nb_day);
         stream4 >> rebalancing_freq;
 
+        std::stringstream stream5(rinv_withdraw_nb_months_frequency);
+        stream5 >> withdraw_nb_months_frequency;
+
+        std::stringstream stream6(rinv_withdraw_montly_weeknum);
+        stream6 >> withdraw_montly_weeknum;
+
+        std::stringstream stream7(rinv_withdraw_week_day);
+        stream7 >> withdraw_week_day;
+
         RecurrentInvestmentParameters strat_rinv_params(rinv_tickers_ts_data, 
                                                         std::stod(this->rinv_param_args[strat_j]["rinv_starting_amount"]), 
                                                         std::stod(this->rinv_param_args[strat_j]["rinv_investment_amount"]), 
@@ -142,7 +154,11 @@ std::vector<struct RecurrentInvestmentParameters> UserInputHandler::get_rinv_par
                                                         investment_week_day, 
                                                         std::stod(this->rinv_param_args[strat_j]["rinv_rebalancing_threshold"]), 
                                                         rebalancing_freq, 
-                                                        parse_string_map(this->rinv_param_args[strat_j]["rinv_assets_desired_pct_allocations"]));
+                                                        parse_string_map(this->rinv_param_args[strat_j]["rinv_assets_desired_pct_allocations"]),
+                                                        std::stod(this->rinv_param_args[strat_j]["rinv_withdrawal_pct"]),
+                                                        withdraw_nb_months_frequency,
+                                                        withdraw_montly_weeknum,
+                                                        withdraw_week_day);
         rinv_params.push_back(strat_rinv_params);
     }
     return rinv_params;

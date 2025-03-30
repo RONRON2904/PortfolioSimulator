@@ -33,7 +33,11 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
                                                              size_t investment_week_day,
                                                              double rebalancing_threshold,
                                                              size_t rebalancing_freq,
-                                                             const std::map<std::string, double> &assets_desired_pct_allocations): 
+                                                             const std::map<std::string, double> &assets_desired_pct_allocations,
+                                                             double withdraw_pct,
+                                                             size_t withdraw_nb_months_frequency,
+                                                             size_t withdraw_monthly_weeknum,
+                                                             size_t withdraw_week_day): 
                                                                                                                                 rinv_tickers_yt(rinv_tickers_yt),
                                                                                                                                 starting_amount(starting_amount),
                                                                                                                                 recurrent_investment_amount(recurrent_investment_amount),
@@ -42,30 +46,51 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
                                                                                                                                 investment_week_day(investment_week_day),
                                                                                                                                 rebalancing_threshold(rebalancing_threshold),
                                                                                                                                 rebalancing_freq(rebalancing_freq),
-                                                                                                                                assets_desired_pct_allocations(assets_desired_pct_allocations)
+                                                                                                                                assets_desired_pct_allocations(assets_desired_pct_allocations),
+                                                                                                                                withdraw_pct(withdraw_pct),
+                                                                                                                                withdraw_nb_months_frequency(withdraw_nb_months_frequency),
+                                                                                                                                withdraw_monthly_weeknum(withdraw_monthly_weeknum),
+                                                                                                                                withdraw_week_day(withdraw_week_day)
 {   
     assert(recurrent_investment_amount >= 0 && "Recurrent investment amount must be >= 0 !\n");
-    assert(investment_nb_months_frequency > 0 && "investment month freq must be > 0 !\n");
+    assert(investment_nb_months_frequency >= 0 && "investment month freq must be >= 0 !\n");
     assert(investment_montly_weeknum >= 0 && "investment week number of the month must be >= 0 !\n");
     assert(investment_montly_weeknum < 5 && "investment week number of the month must be < 5 !\n");
     assert(investment_week_day > 0 && "investment week daymust be > 0 !\n");
     assert(investment_week_day < 6 && "investment week daymust be < 6 !\n");
-    assert(rebalancing_threshold > 0 && "Rebalancing threshold must be > 0 !\n");
+    assert(rebalancing_threshold >= 0 && "Rebalancing threshold must be >= 0 !\n");
     assert(rebalancing_freq >= 0 && "Rebalancing threshold must be >= 0 !\n");
     assert(starting_amount >= 0 && "Starting amount must be >= 0 !\n");
+    assert(withdraw_pct >= 0 && "Withdraw % must be >= 0 !\n");
+    assert(withdraw_nb_months_frequency >= 0 && "withdrawal month freq must be >= 0 !\n");
+    assert(withdraw_monthly_weeknum >= 0 && "withdrawal week number of the month must be >= 0 !\n");
+    assert(withdraw_monthly_weeknum < 5 && "withdrawal week number of the month must be < 5 !\n");
+    assert(withdraw_week_day > 0 && "withdrawal week day must be > 0 !\n");
+    assert(withdraw_week_day < 6 && "withdrawal week day must be < 6 !\n");
 
     if (rinv_tickers_yt.size() > 0)
     {
         std::vector<std::string> tickers;
-        for (auto &ticker_yt : rinv_tickers_yt)
+        if (investment_nb_months_frequency + withdraw_nb_months_frequency > 0)
         {
-            std::string ticker = ticker_yt.get_ticker();
-            tickers.push_back(ticker);
-            this->tickers_rinvestment_dates[ticker] = extract_strategy_config_recurrent_investment_dates(ticker_yt.get_dates(), 
-                                                                                                         investment_nb_months_frequency, 
-                                                                                                         investment_montly_weeknum,
-                                                                                                         investment_week_day);
+            for (auto &ticker_yt : rinv_tickers_yt)
+            {
+                std::string ticker = ticker_yt.get_ticker();
+                tickers.push_back(ticker);
+                std::vector<time_t> ticker_yt_dates = ticker_yt.get_dates();
+                if (investment_nb_months_frequency > 0)
+                    this->tickers_rinvestment_dates[ticker] = extract_strategy_config_recurrent_investment_dates(ticker_yt_dates, 
+                                                                                                                investment_nb_months_frequency, 
+                                                                                                                investment_montly_weeknum,
+                                                                                                                investment_week_day);
+                if(withdraw_nb_months_frequency > 0)
+                    this->tickers_sell_dates_for_withdrawing[ticker] = extract_strategy_config_recurrent_investment_dates(ticker_yt_dates, 
+                                                                                                                        withdraw_nb_months_frequency, 
+                                                                                                                        withdraw_monthly_weeknum,
+                                                                                                                        withdraw_week_day);
+            }
         }
+        
         double sum = 0.0;
         for (const auto &pair : assets_desired_pct_allocations)
         {
@@ -74,7 +99,7 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
             sum += pair.second;
             this->rinv_assets_starting_amounts[pair.first] = assets_desired_pct_allocations.at(pair.first) * starting_amount;
         }
-        assert(std::fabs(sum - 1.0) < 1e-9 && "The sum of percentages is not equal to 1!\n");
+        assert(std::fabs(sum - 1.0) < 1e-4 && "The sum of percentages is not equal to 1!\n");
     }
     this->last_rebalancing_nb_days = 0;
 }

@@ -9,7 +9,7 @@ class CustomStrategy
 public:
     explicit CustomStrategy(StrategyConfig &config);
     void make_transactions(std::time_t date);
-    std::map<time_t, double> run_strategy();
+    std::map<time_t, std::vector<double>> run_strategy();
 
     const std::map<std::time_t, double> get_strategy_values() const;
     double get_strategy_total_returns() const;

@@ -10,17 +10,25 @@ nlohmann::json getJsonBacktestParams(const nlohmann::json& client_json)
 {
     nlohmann::json json_backtest_params;
 
+    json_backtest_params["nb_strat"] = client_json["nbStrategy"];
+    json_backtest_params["fees_per_trade"] = client_json["tradeFees"];
+    json_backtest_params["flat_tax"] = client_json["tax"];
     json_backtest_params["portfolio_name"] = client_json["portfolioName"];
     json_backtest_params["start_date"] = client_json["startDate"];
     json_backtest_params["end_date"] = client_json["endDate"];
     json_backtest_params["starting_amount"] = client_json["startingAmount"];
     json_backtest_params["monthly_deposit_amount"] = client_json["monthlyDeposit"];
-    json_backtest_params["rinv_starting_amount"] = client_json["recurrentInvestmentAmount"];
+    json_backtest_params["rinv_starting_amount"] = client_json["rinvInvestmentAmount"];
     json_backtest_params["rinv_investment_nb_months_frequency"] = client_json["rinvInvestmentNbMonthsFrequency"];
     json_backtest_params["rinv_investment_montly_weeknum"] = client_json["rinvInvestmentMonthlyWeekNum"];
     json_backtest_params["rinv_investment_week_day"] = client_json["rinvInvestmentWeekDay"];
     json_backtest_params["rinv_rebalancing_threshold"] = client_json["rinvRebalancingThreshold"];
     json_backtest_params["rinv_rebalancing_freq_nb_day"] = client_json["rinvRebalancingFreqMinNbDays"];
+    json_backtest_params["rinv_withdrawal_pct"] = client_json["rinvWithdrawalPct"];
+    json_backtest_params["rinv_withdrawal_nb_months_frequency"] = client_json["rinvWithdrawalNbMonthsFrequency"];
+    json_backtest_params["rinv_withdrawal_monthly_weeknum"] = client_json["rinvWithdrawalMonthlyWeekNum"];
+    json_backtest_params["rinv_withdrawal_week_day"] = client_json["rinvWithdrawalWeekDay"];
+    json_backtest_params["rinv_rebalancing_threshold"] = client_json["rinvRebalancingThreshold"];
     json_backtest_params["reinvestment_policy"] = client_json["reinvestmentPolicy"];
     std::cout << json_backtest_params << std::endl;
 
@@ -39,7 +47,9 @@ std::string runBacktest(const nlohmann::json& client_json) {
     nlohmann::json json_backtest_params = getJsonBacktestParams(client_json);
     // Construct the command with the cleaned arguments
     std::ostringstream command;
-    command << "./main --nb_strat=2  --fees_per_trade=[1.0,1.0] --flat_tax=[0.3,0.3] "
+    command << "./main --nb_strat=" << json_backtest_params["nb_strat"] << " "  
+            << "--fees_per_trade="<< json_backtest_params["fees_per_trade"] << " "  
+            << "--flat_tax=" << json_backtest_params["flat_tax"] << " "
             << "--strategy_name=" << json_backtest_params["portfolio_name"] << " "
             << "--all_tickers=" << json_backtest_params["all_tickers"] << " "
             << "--start_date=" <<  json_backtest_params["start_date"] << " "
@@ -55,6 +65,10 @@ std::string runBacktest(const nlohmann::json& client_json) {
             << "--rinv_investment_week_day=" << json_backtest_params["rinv_investment_week_day"]  << " "
             << "--rinv_rebalancing_threshold=" << json_backtest_params["rinv_rebalancing_threshold"]  << " "
             << "--rinv_rebalancing_freq_nb_day=" << json_backtest_params["rinv_rebalancing_freq_nb_day"]  << " "
+            << "--rinv_withdrawal_pct=" << json_backtest_params["rinv_withdrawal_pct"] << " "
+            << "--rinv_withdrawal_nb_months_frequency=" << json_backtest_params["rinv_withdrawal_nb_months_frequency"] << " "
+            << "--rinv_withdrawal_monthly_weeknum=" << json_backtest_params["rinv_withdrawal_monthly_weeknum"] << " "
+            << "--rinv_withdrawal_week_day=" << json_backtest_params["rinv_withdrawal_week_day"] << " "
             << "--rinv_assets_desired_pct_allocations=" << json_backtest_params["rinv_assets_desired_pct_allocations"];
 
     std::cout << "Executing command: " << command.str() << std::endl;

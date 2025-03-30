@@ -1,6 +1,5 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Trash } from "lucide-react";
 
@@ -24,6 +23,17 @@ export default function PortfolioAssets({ strategies, setStrategies, availableSy
       updatedStrategies[strategyIndex] = {
         ...updatedStrategies[strategyIndex],
         assets: [...updatedStrategies[strategyIndex].assets, { symbol: "", allocation: "" }]
+      };
+      return updatedStrategies;
+    });
+  };
+
+  const updateStrategyField = (strategyIndex: number, field: string, value: string) => {
+    setStrategies((prevStrategies) => {
+      const updatedStrategies = [...prevStrategies];
+      updatedStrategies[strategyIndex] = {
+        ...updatedStrategies[strategyIndex],
+        [field]: value,
       };
       return updatedStrategies;
     });
@@ -86,6 +96,31 @@ export default function PortfolioAssets({ strategies, setStrategies, availableSy
               </button>
             </div>
           </div>
+          {strategy.assets.filter((asset) => asset.symbol.trim() !== "").length > 1 && (
+            <div className="mt-2 p-2 border rounded bg-gray-50">
+              <h4 className="text-md font-semibold">Rebalancing Options</h4>
+              <div className="flex gap-1 mt-1">
+                <Input
+                  type="number"
+                  value={strategy.rinvRebalancingThreshold || ""}
+                  onChange={(e) =>
+                    updateStrategyField(index, "rinvRebalancingThreshold", e.target.value)
+                  }
+                  placeholder="Rebalancing Threshold (%)"
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  value={strategy.rinvRebalancingFreqMinNbDays || ""}
+                  onChange={(e) =>
+                    updateStrategyField(index, "rinvRebalancingFreqMinNbDays", e.target.value)
+                  }
+                  placeholder="Rebalance After X Days"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

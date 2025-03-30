@@ -2,18 +2,25 @@ export const handleRunBacktest = async (strategies, setResults, setShowGraph) =>
     // Simulate backtest logic here
     // This is a placeholder for actual backtest logic; replace with your API call or logic.
     const requestData = {
+        nbStrategy: strategies.length,
+        tax: strategies.map(s => s.tax),
+        tradeFees: strategies.map(s => s.tradeFees),
         portfolioName: strategies.map(s => s.portfolioName),
         startDate: strategies.map(s => s.startDate),
         endDate: strategies.map(s => s.endDate),
         startingAmount: strategies.map(s => parseFloat(s.initialAmount) || 0),
         monthlyDeposit: strategies.map(s => parseFloat(s.monthlyDeposit) || 0),
         reinvestmentPolicy: strategies.map(s => s.reinvestmentPolicy),
-        recurrentInvestmentAmount: strategies.map(s => parseFloat(s.recurrentInvestmentAmount) || 0),
+        rinvInvestmentAmount: strategies.map(s => parseFloat(s.rinvInvestmentAmount) || 0),
         rinvInvestmentNbMonthsFrequency: strategies.map(s => parseInt(s.rinvInvestmentNbMonthsFrequency) || 0),
         rinvInvestmentMonthlyWeekNum: strategies.map(s => parseInt(s.rinvInvestmentMonthlyWeekNum) || 0),
         rinvInvestmentWeekDay: strategies.map(s => parseInt(s.rinvInvestmentWeekDay) || 0),
         rinvRebalancingThreshold: strategies.map(s => parseFloat(s.rinvRebalancingThreshold) || 0),
         rinvRebalancingFreqMinNbDays: strategies.map(s => parseInt(s.rinvRebalancingFreqMinNbDays) || 0),
+        rinvWithdrawalPct: strategies.map(s => parseFloat(s.rinvWithdrawalPct) || 0),
+        rinvWithdrawalNbMonthsFrequency: strategies.map(s => parseInt(s.rinvWithdrawalNbMonthsFrequency) || 0),
+        rinvWithdrawalMonthlyWeekNum: strategies.map(s => parseInt(s.rinvWithdrawalMonthlyWeekNum) || 0),
+        rinvWithdrawalWeekDay: strategies.map(s => parseInt(s.rinvWithdrawalWeekDay) || 0),
         rinvAllocations: strategies.map(s => {
           const formattedAssets = s.assets.reduce((acc, asset) => {
             if (asset.symbol && asset.allocation) {
@@ -27,7 +34,7 @@ export const handleRunBacktest = async (strategies, setResults, setShowGraph) =>
           s.assets.filter(asset => asset.symbol && asset.allocation).map(asset => asset.symbol)
         )
       };
-  
+      console.log(requestData);
       try {
         const response = await fetch("http://localhost:8080/run-backtest", {
           method: "POST",
@@ -36,7 +43,7 @@ export const handleRunBacktest = async (strategies, setResults, setShowGraph) =>
           },
           body: JSON.stringify(requestData)
         });
-  
+        
         const rawText = await response.text();
         if (!response.ok) {
           throw new Error(`HTTP Error ${response.status}: ${rawText}`);
