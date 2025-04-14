@@ -34,6 +34,10 @@ std::map<time_t, std::vector<double>> CustomStrategy::run_strategy()
     this->ptf->deposit(this->config.global_params.starting_amount, dates.front());
     for (const auto &date : dates)
     {
+        if (this->config.global_params.start_date > date)
+            continue;
+        if (this->config.global_params.end_date < date)
+            break;
         if (std::count(this->config.global_params.monthly_deposit_dates.begin(), this->config.global_params.monthly_deposit_dates.end(), date) > 0)
         {
             ptf->deposit(this->config.global_params.monthly_deposit_amount, date);
@@ -101,7 +105,22 @@ double CustomStrategy::get_strategy_extended_internal_return_rate(double toleran
             upper_bound = rate;
     }
 
-    return rate;
+    return std::round(100.0 * rate) / 100.0;
+}
+
+double CustomStrategy::get_strategy_total_investments() const{
+    double total_investments = 0.0;
+    for (const auto &ticker_yt : this->config.global_params.all_tickers_yt)
+    {
+        total_investments += this->ptf->get_ticker_expenses_value(ticker_yt.get_ticker(), ticker_yt.get_dates().back());
+    }
+    return std::round(100.0 * total_investments) / 100.0;
+}
+
+double CustomStrategy::get_strategy_max_drawdown() const{
+    Timeseries portfolio_values = this->ptf->get_ts_portfolio_values();
+    std::vector<double> max_drawdowns = portfolio_values.get_maximum_drawdowns(portfolio_values.get_ts_values().size());
+    return std::round(100.0 * max_drawdowns[0]) / 100.0;
 }
 
 void CustomStrategy::save_end_portfolio(std::string filename)
@@ -192,8 +211,8 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
         if (dividends.size() > 0 && dividends.find(date) != dividends.end())
         {   
             double shares_amt = (1 - this->config.global_params.flat_tax) * dividends[date] * this->ptf->get_ticker_shares(ticker, date) / ticker_value;
-            this->ptf->deposit(shares_amt * ticker_value, date);
             if (this->config.global_params.reinvestment_policy == true){
+                this->ptf->receive_dividend(shares_amt * ticker_value, date);
                 this->ptf->buy(ticker_yt, shares_amt, date);
             }
         }
@@ -204,6 +223,17 @@ void CustomStrategy::handle_recurrent_investment_parameters(std::time_t date)
             if (std::count(ticker_withdrawal_dates.begin(), ticker_withdrawal_dates.end(), date) > 0)
             {
                 double ticker_shares_to_sell =  this->ptf->get_ticker_shares(ticker, date) * this->config.rinv_params.withdraw_pct / (12 / this->config.rinv_params.withdraw_nb_months_frequency);
+                this->ptf->sell(ticker_yt, ticker_shares_to_sell, date);
+                this->ptf->withdraw(ticker_shares_to_sell * ticker_value, date);
+            }
+        }
+
+        if (this->config.rinv_params.withdraw_amount > 0)
+        {
+            std::vector<std::time_t> ticker_withdrawal_dates = this->config.rinv_params.tickers_sell_dates_for_withdrawing[ticker];
+            if (std::count(ticker_withdrawal_dates.begin(), ticker_withdrawal_dates.end(), date) > 0)
+            {
+                double ticker_shares_to_sell =  (this->config.rinv_params.withdraw_amount / ticker_value) / (12 / this->config.rinv_params.withdraw_nb_months_frequency);
                 this->ptf->sell(ticker_yt, ticker_shares_to_sell, date);
                 this->ptf->withdraw(ticker_shares_to_sell * ticker_value, date);
             }

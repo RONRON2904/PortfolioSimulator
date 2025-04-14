@@ -19,7 +19,7 @@ export default function PortfolioConfig() {
                           endDate: "",
                           initialAmount: "",
                           monthlyDeposit: "0",
-                          reinvestmentPolicy: "true",
+                          reinvestmentPolicy: true,
                           rinvInvestmentAmount: "0",
                           rinvInvestmentNbMonthsFrequency: "1",
                           rinvInvestmentMonthlyWeekNum: "0",
@@ -27,9 +27,14 @@ export default function PortfolioConfig() {
                           rinvRebalancingThreshold: "0",
                           rinvRebalancingFreqMinNbDays: "0",
                           rinvWithdrawalPct: "0.0",
+                          rinvWithdrawalAmount: "0",
                           rinvWithdrawalNbMonthsFrequency: "0",
                           rinvWithdrawalMonthlyWeekNum: "0",
                           rinvWithdrawalWeekDay: "1",
+                          techindSmaWindow: "0",
+                          techindRsiWindow: "0",
+                          techindRsiBuyThreshold: "0",
+                          techindRsiSellThreshold: "0",
                           assets: Array(3).fill({ symbol: "", allocation: "" }) 
                         };
     const [strategies, setStrategies] = useState([{ ...emptyStrategy }]);
@@ -46,7 +51,7 @@ export default function PortfolioConfig() {
     const [activeTab, setActiveTab] = useState("settings");
   
     useEffect(() => {
-      setAvailableSymbols(["AAPL", "GOOGL", "MSFT","TSLA","AMZN","CSSPX.MI","IDUS.L","EGLN.L","HPQ","TTE.PA","WMT","NVDA"]);
+      setAvailableSymbols(['AAPL', 'GOOGL', 'MSFT','TSLA','AMZN','CSSPX.MI','IDUS.L','EGLN.L','HPQ','TTE.PA','WMT','NVDA']);
     }, []);
   
     const addNewStrategy = () => {
@@ -74,22 +79,30 @@ export default function PortfolioConfig() {
                 </div>
               </div>
   
-              <TabsContent value="settings">
-                <StrategySettings strategies={strategies} setStrategies={setStrategies}/>
-              </TabsContent>
-  
-              <TabsContent value="portfolio-assets">
-                <PortfolioAssets strategies={strategies} setStrategies={setStrategies} availableSymbols={availableSymbols}/>
-                <div className="flex justify-center mt-6">
-                  <Button
-                    onClick={() => handleRunBacktest(strategies, setResults, setShowGraph)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-2"
-                  >
-                    <Play size={18} />
-                    <span>Run Backtest</span>
-                  </Button>
+              <TabsContent value="settings" forceMount>
+                <div className={activeTab !== "settings" ? "hidden" : ""}>
+                  <StrategySettings strategies={strategies} setStrategies={setStrategies} />
                 </div>
-                {showGraph && <BacktestResultsChart results={results} />}
+              </TabsContent>
+
+              <TabsContent value="portfolio-assets" forceMount>
+                <div className={activeTab !== "portfolio-assets" ? "hidden" : ""}>
+                  <PortfolioAssets
+                    strategies={strategies}
+                    setStrategies={setStrategies}
+                    availableSymbols={availableSymbols}
+                  />
+                  <div className="flex justify-center mt-6">
+                    <Button
+                      onClick={() => handleRunBacktest(strategies, setResults, setShowGraph)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-2"
+                    >
+                      <Play size={18} />
+                      <span>Run Backtest</span>
+                    </Button>
+                  </div>
+                  {showGraph && <BacktestResultsChart results={results} />}
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>

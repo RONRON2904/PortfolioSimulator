@@ -398,6 +398,57 @@ std::map<std::string, double> parse_string_map(const std::string& input){
     return result;
 }
 
+std::string vector_to_string(const std::vector<std::string>& vec) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        oss << vec[i];
+        if (i != vec.size() - 1) {
+            oss << ", ";
+        }
+    }
+    oss << "]";
+    return oss.str();
+}
+
+std::vector<std::string> parse_string_json_array(const std::string& input) {
+    std::vector<std::string> result;
+    std::vector<std::vector<std::string>> res_array;
+    try {
+        auto json_array = nlohmann::json::parse(input);
+
+        if (!json_array.is_array()) {
+            throw std::invalid_argument("Input is not a JSON array");
+        }
+
+        for (const auto& item : json_array) {
+            if (item.is_string()) {
+                result.push_back(item.get<std::string>());
+            } else if (item.is_array()){
+                result.push_back(vector_to_string(item.get<std::vector<std::string>>()));
+            }
+            else
+                result.push_back(item.dump());
+        }
+    } catch (const std::exception& e) {
+        throw std::invalid_argument("Failed to parse JSON array: " + std::string(e.what()));
+    }
+
+    return result;
+}
+
+std::string escape_json(const std::string &s) {
+    std::ostringstream o;
+    for (auto c = s.cbegin(); c != s.cend(); c++) {
+        if (*c == '\\') {
+            o << "";
+        } else {
+            o << *c;
+        }
+    }
+    return o.str();
+}
+
 std::vector<std::string> parse_string_array(const std::string& input) {
     std::vector<std::string> result;
 
@@ -434,6 +485,7 @@ std::vector<std::string> parse_string_array(const std::string& input) {
     // Add the last token
     current_token.erase(0, current_token.find_first_not_of(" \t"));
     current_token.erase(current_token.find_last_not_of(" \t") + 1);
+
     if (!current_token.empty()) {
         result.push_back(current_token);
     }

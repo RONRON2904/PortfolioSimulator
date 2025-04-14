@@ -25,6 +25,7 @@ public:
     void withdraw(double cash_amt, std::time_t date);
     void buy(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
     void sell(const YahooTimeseries& ticker_yt, double shares_amt, std::time_t date);
+    void receive_dividend(double cash_amt, std::time_t date);
     void set_portfolio_values_and_prices();
     void save_portfolio(std::string filename) const;
 

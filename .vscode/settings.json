@@ -88,6 +88,11 @@
         "csignal": "cpp",
         "charconv": "cpp",
         "regex": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "strstream": "cpp",
+        "coroutine": "cpp",
+        "source_location": "cpp",
+        "future": "cpp",
+        "typeindex": "cpp"
     }
 }

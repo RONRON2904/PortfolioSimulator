@@ -8,6 +8,76 @@
 { if (!(cond)) { std::ostringstream str; str << msg; std::cerr << str.str(); std::abort(); } \
 } while(0)
 
+UserInputHandler::UserInputHandler(nlohmann::json inputs)
+{
+    nlohmann::json allowed_params = read_json_file("../allowed_params.json");
+    std::set<std::string> general_params_allowed_list = allowed_params["GeneralParameters"];
+    std::set<std::string> rinv_params_allowed_list = allowed_params["RecurrentInvestmentParameters"];
+    std::set<std::string> risk_params_allowed_list = allowed_params["RiskParameters"];
+    std::set<std::string> techind_params_allowed_list = allowed_params["TechnicalIndicators"];
+    this->nb_strategies = inputs["nb_strat"];
+    std::vector<std::vector<std::string>> all_tickers_vector;
+    std::time_t min_start_date, max_end_date;
+    
+    this->general_param_args.resize(this->nb_strategies);
+    this->rinv_param_args.resize(this->nb_strategies);
+    this->risk_param_args.resize(this->nb_strategies);
+    this->techind_param_args.resize(this->nb_strategies);
+    for (auto& [key, value] : inputs.items()){
+        if (key == "nb_strat") continue;
+        
+        std::vector<std::string> values = parse_string_json_array(value.dump());
+        bool correct_param = false;
+        for (int strat_j = 0; strat_j < this->nb_strategies; ++strat_j){
+            std::string val = values[strat_j];
+           
+            if (std::find(allowed_params["GeneralParameters"].begin(), allowed_params["GeneralParameters"].end(), key) != allowed_params["GeneralParameters"].end()) {
+                this->general_param_args[strat_j][key] = val;
+                correct_param = true;
+
+                if (key == "all_tickers") {
+                    all_tickers_vector.push_back(parse_string_array(val));
+                }
+                if (key == "start_date") {
+                    std::time_t start_date = date_string_to_unix_timestamp(val);
+                    if (strat_j == 0)
+                        min_start_date = start_date;
+                    else
+                        min_start_date = std::min(min_start_date, start_date);
+                }
+                if (key == "end_date") {
+                    std::time_t end_date = date_string_to_unix_timestamp(val);
+                    if (strat_j == 0)
+                        max_end_date = end_date;
+                    else
+                        max_end_date = std::max(max_end_date, end_date);
+                }
+            }
+            else if (std::find(allowed_params["RecurrentInvestmentParameters"].begin(), allowed_params["RecurrentInvestmentParameters"].end(), key) != allowed_params["RecurrentInvestmentParameters"].end()) {
+                this->rinv_param_args[strat_j][key] = val;
+                correct_param = true;
+            }
+            else if (std::find(allowed_params["RiskParameters"].begin(), allowed_params["RiskParameters"].end(), key) != allowed_params["RiskParameters"].end()) {
+                this->risk_param_args[strat_j][key] = val;
+                correct_param = true;
+            }
+            else if (std::find(allowed_params["TechnicalIndicators"].begin(), allowed_params["TechnicalIndicators"].end(), key) != allowed_params["TechnicalIndicators"].end()) {
+                this->techind_param_args[strat_j][key] = val;
+                correct_param = true;
+            }
+        }
+        std::string error_message = fmt::format("Parameter {} is not recognized", value.dump()).c_str();
+        ASSERT_WITH_MSG(correct_param, error_message);
+    }
+    std::set<std::string> flattened_set = flatten_to_set(all_tickers_vector);
+    std::vector<std::string> all_tickers_list(flattened_set.begin(), flattened_set.end());
+    assert(all_tickers_list.size() >= 1 && "At least one ticker is required. \n");
+    YahooFinance *yf = new YahooFinance(all_tickers_list, unix_timestamp_to_date_string(min_start_date), unix_timestamp_to_date_string(max_end_date), "1d");
+    this->tickers_ts_data = yf->get_tickers_ts_data();
+    this->all_tickers_dates = get_unique_dates(this->tickers_ts_data);
+    delete yf;
+}
+
 UserInputHandler::UserInputHandler(int argc, char* argv[])
 {
     nlohmann::json allowed_params = read_json_file("../allowed_params.json");
@@ -85,7 +155,9 @@ std::vector<struct GeneralParameters> UserInputHandler::get_general_parameters()
             if (std::find(all_tickers_list.begin(), all_tickers_list.end(), ticker_yt.get_ticker()) != all_tickers_list.end())
                 strat_tickers_yt.push_back(ticker_yt);
         }
-        GeneralParameters strat_general_params(strat_tickers_yt, 
+        GeneralParameters strat_general_params(strat_tickers_yt,
+                                               date_string_to_unix_timestamp(this->general_param_args[strat_j]["start_date"]),
+                                               date_string_to_unix_timestamp(this->general_param_args[strat_j]["end_date"]),
                                                this->general_param_args[strat_j]["strategy_name"], 
                                                std::stod(this->general_param_args[strat_j]["starting_amount"]), 
                                                std::stod(this->general_param_args[strat_j]["monthly_deposit_amount"]), 
@@ -156,6 +228,7 @@ std::vector<struct RecurrentInvestmentParameters> UserInputHandler::get_rinv_par
                                                         rebalancing_freq, 
                                                         parse_string_map(this->rinv_param_args[strat_j]["rinv_assets_desired_pct_allocations"]),
                                                         std::stod(this->rinv_param_args[strat_j]["rinv_withdrawal_pct"]),
+                                                        std::stod(this->rinv_param_args[strat_j]["rinv_withdrawal_amount"]),
                                                         withdraw_nb_months_frequency,
                                                         withdraw_montly_weeknum,
                                                         withdraw_week_day);
@@ -202,19 +275,28 @@ std::vector<struct TechnicalIndicators> UserInputHandler::get_technical_indicato
     std::vector<struct TechnicalIndicators> techind_params;
     for (int strat_j = 0; strat_j < this->nb_strategies; ++strat_j)
     {
-        std::vector<std::string> techind_rsi_tickers_list = parse_string_list(this->risk_param_args[strat_j]["techind_rsi_tickers"]);
-        std::vector<std::string> techind_sma_tickers_list = parse_string_list(this->risk_param_args[strat_j]["techind_sma_tickers"]);
-        std::vector<std::string> techind_rsi_sma_tickers_list = parse_string_list(this->risk_param_args[strat_j]["techind_rsi_sma_tickers"]);
+        std::vector<std::string> techind_rsi_tickers_list = parse_string_list(this->techind_param_args[strat_j]["techind_rsi_tickers"]);
+        std::vector<std::string> techind_sma_tickers_list = parse_string_list(this->techind_param_args[strat_j]["techind_sma_tickers"]);
+        std::vector<std::string> techind_rsi_sma_tickers_list = parse_string_list(this->techind_param_args[strat_j]["techind_rsi_sma_tickers"]);
 
-        if (techind_rsi_tickers_list.empty() && techind_sma_tickers_list.empty() && techind_rsi_sma_tickers_list.empty()){
+        size_t rsi_period, sma_period;
+        std::string techind_rsi_period = this->techind_param_args[strat_j]["techind_rsi_period"];
+        std::string techind_sma_period = this->techind_param_args[strat_j]["techind_sma_period"];
+
+        std::stringstream stream(techind_rsi_period);
+        stream >> rsi_period;
+
+        std::stringstream stream2(techind_sma_period);
+        stream2 >> sma_period;
+
+        if (rsi_period == 0 && sma_period == 0){
             techind_params.push_back(TechnicalIndicators());
             continue;
         }
-
         std::vector<YahooTimeseries> techind_rsi_tickers_ts_data;
         std::vector<YahooTimeseries> techind_sma_tickers_ts_data;
         std::vector<YahooTimeseries> techind_rsi_sma_tickers_ts_data;
-        if (techind_rsi_tickers_list.size() > 0)
+        if (techind_rsi_tickers_list.size() > 0 && rsi_period > 0)
         {
             for (const auto& ticker: techind_rsi_tickers_list)
             {
@@ -226,7 +308,7 @@ std::vector<struct TechnicalIndicators> UserInputHandler::get_technical_indicato
             }
         }
 
-        if (techind_sma_tickers_ts_data.size() > 0)
+        if (techind_sma_tickers_list.size() > 0 && sma_period > 0)
         {
             for (const auto& ticker: techind_sma_tickers_list)
             {
@@ -238,7 +320,7 @@ std::vector<struct TechnicalIndicators> UserInputHandler::get_technical_indicato
             }
         }
 
-        if (techind_rsi_sma_tickers_ts_data.size() > 0)
+        if (techind_rsi_sma_tickers_list.size() > 0 && rsi_period > 0 && sma_period > 0)
         {
             for (const auto& ticker: techind_rsi_sma_tickers_list)
             {
@@ -250,26 +332,13 @@ std::vector<struct TechnicalIndicators> UserInputHandler::get_technical_indicato
             }
         }
 
-        size_t rsi_period, sma_period;
-        std::string techind_rsi_period = this->risk_param_args[strat_j]["techind_rsi_period"];
-        std::string techind_sma_period = this->risk_param_args[strat_j]["techind_sma_period"];
-
-        std::stringstream stream(techind_rsi_period);
-        stream >> rsi_period;
-
-        std::stringstream stream2(techind_sma_period);
-        stream2 >> sma_period;
-
         TechnicalIndicators strat_techind_params(techind_rsi_tickers_ts_data,
                                                 techind_sma_tickers_ts_data,
                                                 techind_rsi_sma_tickers_ts_data, 
                                                 rsi_period,
                                                 sma_period,
-                                                std::stod(this->risk_param_args[strat_j]["techind_rsi_buy_threshold"]),
-                                                std::stod(this->risk_param_args[strat_j]["techind_rsi_sell_threshold"]),
-                                                std::stod(this->risk_param_args[strat_j]["techind_rsi_starting_amount"]),
-                                                std::stod(this->risk_param_args[strat_j]["techind_sma_starting_amount"]),
-                                                std::stod(this->risk_param_args[strat_j]["techind_rsi_sma_starting_amount"]));
+                                                std::stod(this->techind_param_args[strat_j]["techind_rsi_buy_threshold"]),
+                                                std::stod(this->techind_param_args[strat_j]["techind_rsi_sell_threshold"]));
         techind_params.push_back(strat_techind_params);
     }
     return techind_params;

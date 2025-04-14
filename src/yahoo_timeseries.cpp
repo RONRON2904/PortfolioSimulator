@@ -173,6 +173,30 @@ std::map<std::time_t, double> Timeseries::get_ts_pct_changes(size_t window_size)
     return pct_changes;
 }
 
+std::vector<double> Timeseries::get_pct_change_since_last_max() const{
+    assert(this->values.size() > 1 && "Error: Timeseries must contains at least 2 elements\n");
+    std::vector<double> pct_max_changes(this->values.size() - 1);
+    double ath = this->values[0];
+    for (size_t i=1; i < this->values.size(); ++i){
+        pct_max_changes[i] = (this->values[i] - ath) / ath;
+        if (this->values[i] > ath)
+            ath = this->values[i];
+    }
+    return pct_max_changes;
+}
+
+std::map<std::time_t, double> Timeseries::get_ts_pct_changes_since_last_max() const{
+    assert(this->values.size() > 1 && "Error: Timeseries must contains at least 2 elements\n");
+    std::map<std::time_t, double> pct_max_changes;
+    double ath = this->values[0];
+    for (size_t i=1; i < this->values.size(); ++i){
+        pct_max_changes[this->dates[i]] = std::round(100.0 * ((this->values[i] - ath) / ath)) / 100.0;
+        if (this->values[i] > ath)
+            ath = this->values[i];
+    }
+    return pct_max_changes;
+}
+
 std::vector<double> Timeseries::get_log_returns() const{
     assert(this->values.size() > 1 && "Error: Timeseries must contains at least 2 elements\n");
     std::vector<double> log_returns(this->values.size() - 1);

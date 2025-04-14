@@ -21,6 +21,7 @@ public:
     std::vector<double> pget_simple_moving_averages(size_t window_size) const; // Parallel Algorithm Version
     std::vector<double> get_exponential_moving_averages(size_t window_size) const;
     std::vector<double> get_maximum_drawdowns(size_t window_size) const;
+    std::vector<double> get_pct_change_since_last_max() const;
     std::vector<double> get_pct_changes() const;
     std::vector<double> get_log_returns() const;
     std::vector<double> get_volatilities(size_t window_size) const;
@@ -30,6 +31,7 @@ public:
     std::map<std::time_t, double> get_ts_exponential_moving_averages(size_t window_size) const;
     std::map<std::time_t, double> get_ts_maximum_drawdowns(size_t window_size) const;
     std::map<std::time_t, double> get_ts_pct_changes(size_t window_size) const;
+    std::map<std::time_t, double> get_ts_pct_changes_since_last_max() const;
     std::map<std::time_t, double> get_ts_log_returns() const;
     std::map<std::time_t, double> get_ts_volatilities(size_t window_size) const;
     std::map<std::time_t, double> get_ts_rsis(size_t window_size) const;

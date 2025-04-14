@@ -28,8 +28,10 @@ bool vectors_almost_equal(const std::vector<double> &v1, const std::vector<doubl
 double get_standard_deviation(const std::vector<double> &values);
 bool contains_all_tickers_yt_vectors(const std::vector<YahooTimeseries> &all_tickers_yt, const std::vector<YahooTimeseries> &sub_tickers_yt);
 nlohmann::json read_json_file(std::string json_filepath);
+std::string vector_to_string(const std::vector<std::string>& vec);
 std::vector<std::string> parse_string_list(const std::string& input);
 std::map<std::string, double> parse_string_map(const std::string& input);
+std::vector<std::string> parse_string_json_array(const std::string& input);
 std::vector<std::string> parse_string_array(const std::string& input);
 std::set<std::string> flatten_to_set(const std::vector<std::vector<std::string>>& list_of_lists);
 std::vector<double> get_closest_value(std::time_t date, const std::map<std::time_t, std::vector<double>>& values_map);

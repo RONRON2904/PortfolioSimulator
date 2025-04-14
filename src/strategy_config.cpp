@@ -20,7 +20,7 @@ StrategyConfig::StrategyConfig(const GeneralParameters &global_params,
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, indicator_params.sma_tickers_yt) && "Tickers with sma conditions are not included in the global tickers list");
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, indicator_params.rsi_tickers_yt) && "Tickers with rsi conditions are not included in the global tickers list");
     assert(contains_all_tickers_yt_vectors(global_params.all_tickers_yt, risk_params.risk_tickers_yt) && "Tickers with risk management conditions are not included in the global tickers list");
-    assert(rinv_params.starting_amount + indicator_params.rsi_starting_amount + indicator_params.sma_starting_amount + indicator_params.rsi_sma_starting_amount <= global_params.starting_amount && "Recurrent & Technical investment starting amount sum can't be greater that global starting amount");
+    assert(rinv_params.starting_amount <= global_params.starting_amount && "Recurrent & Technical investment starting amount sum can't be greater that global starting amount");
 }
 
 RecurrentInvestmentParameters::RecurrentInvestmentParameters(): rinv_tickers_yt(EMPTY_YTIMESERIES), assets_desired_pct_allocations(EMPTY_MAP) {}
@@ -35,6 +35,7 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
                                                              size_t rebalancing_freq,
                                                              const std::map<std::string, double> &assets_desired_pct_allocations,
                                                              double withdraw_pct,
+                                                             double withdraw_amount,
                                                              size_t withdraw_nb_months_frequency,
                                                              size_t withdraw_monthly_weeknum,
                                                              size_t withdraw_week_day): 
@@ -48,6 +49,7 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
                                                                                                                                 rebalancing_freq(rebalancing_freq),
                                                                                                                                 assets_desired_pct_allocations(assets_desired_pct_allocations),
                                                                                                                                 withdraw_pct(withdraw_pct),
+                                                                                                                                withdraw_amount(withdraw_amount),
                                                                                                                                 withdraw_nb_months_frequency(withdraw_nb_months_frequency),
                                                                                                                                 withdraw_monthly_weeknum(withdraw_monthly_weeknum),
                                                                                                                                 withdraw_week_day(withdraw_week_day)
@@ -62,6 +64,7 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
     assert(rebalancing_freq >= 0 && "Rebalancing threshold must be >= 0 !\n");
     assert(starting_amount >= 0 && "Starting amount must be >= 0 !\n");
     assert(withdraw_pct >= 0 && "Withdraw % must be >= 0 !\n");
+    assert(withdraw_amount >= 0 && "Withdraw amount must be >= 0 !\n");
     assert(withdraw_nb_months_frequency >= 0 && "withdrawal month freq must be >= 0 !\n");
     assert(withdraw_monthly_weeknum >= 0 && "withdrawal week number of the month must be >= 0 !\n");
     assert(withdraw_monthly_weeknum < 5 && "withdrawal week number of the month must be < 5 !\n");
@@ -105,12 +108,16 @@ RecurrentInvestmentParameters::RecurrentInvestmentParameters(const std::vector<Y
 }
 
 GeneralParameters::GeneralParameters(const std::vector<YahooTimeseries> &all_tickers_yt,
+                                    std::time_t start_date,
+                                    std::time_t end_date,
                                     std::string strategy_name,
                                     double starting_amount,
                                     double monthly_deposit_amount,
                                     double fees_per_trade,
                                     double flat_tax,
                                     bool reinvestment_policy):all_tickers_yt(all_tickers_yt),
+                                                              start_date(start_date),
+                                                              end_date(end_date),
                                                               strategy_name(strategy_name),
                                                               starting_amount(starting_amount),
                                                               monthly_deposit_amount(monthly_deposit_amount),
@@ -126,6 +133,10 @@ GeneralParameters::GeneralParameters(const std::vector<YahooTimeseries> &all_tic
     assert(flat_tax < 1 && "Flat tax must be < 1 !\n");
 
     std::vector<std::time_t> dates = get_unique_dates(all_tickers_yt);
+    assert(dates.size() > 0 && "There are no dates in the passed YahooTimeseries. \n");
+    //assert(start_date >= dates[0] && "Start date must be >= the first date of the passed YahooTimeseries. \n");
+    //assert(end_date <= dates[dates.size() - 1] && "End date must be <= the last date of the passed YahooTimeseries. \n");
+    assert(start_date < end_date && "Start date must be < end date. \n");
     this->monthly_deposit_dates = extract_first_dates_of_each_month(dates);
 }
 
@@ -152,34 +163,24 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
                                          size_t rsi_period,
                                          size_t sma_period,
                                          double rsi_buy_threshold,
-                                         double rsi_sell_threshold,
-                                         double rsi_starting_amount,
-                                         double sma_starting_amount,
-                                         double rsi_sma_starting_amount): rsi_tickers_yt(rsi_tickers_yt), 
+                                         double rsi_sell_threshold): rsi_tickers_yt(rsi_tickers_yt), 
                                                                      sma_tickers_yt(sma_tickers_yt),
                                                                      rsi_sma_tickers_yt(rsi_sma_tickers_yt),
                                                                      rsi_period(rsi_period),
                                                                      sma_period(sma_period),
                                                                      rsi_buy_threshold(rsi_buy_threshold),
-                                                                     rsi_sell_threshold(rsi_sell_threshold),
-                                                                     rsi_starting_amount(rsi_starting_amount),
-                                                                     sma_starting_amount(sma_starting_amount),
-                                                                     rsi_sma_starting_amount(rsi_sma_starting_amount)
+                                                                     rsi_sell_threshold(rsi_sell_threshold)
 {
     assert(rsi_tickers_yt.size() + sma_tickers_yt.size() + rsi_sma_tickers_yt.size() > 0 && "Configuring technical indicators needs to have assets \n");
-    assert(rsi_period > 0  && "Window for the rsi must be > 0\n");
-    assert(sma_period > 0  && "Window for the rsi must be > 0\n");
     assert(rsi_buy_threshold >= 0  && "RSI buy for the rsi must be >= 0\n");
     assert(rsi_buy_threshold <= 100  && "RSI buy for the rsi must be <= 100\n");
     assert(rsi_sell_threshold >= 0  && "RSI sell threhold must be >= 0\n");
     assert(rsi_sell_threshold <= 100  && "RSI sell threhold must be <= 100\n");
-    assert(rsi_starting_amount >= 0  && "RSI starting amount must be >= 0\n");
-    assert(sma_starting_amount >= 0  && "SMA starting amount must be >= 0\n");
-    assert(rsi_sma_starting_amount >= 0  && "RSI SMA starting amount must be >= 0\n");
 
 
     if (sma_tickers_yt.size() > 0)
     {
+        assert(sma_period > 0  && "Window for the rsi must be > 0\n");
         for (auto &ticker_yt: sma_tickers_yt)
         {
             std::string ticker = ticker_yt.get_ticker();
@@ -189,6 +190,7 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
 
     if (rsi_tickers_yt.size() > 0)
     {
+        assert(rsi_period > 0  && "Window for the rsi must be > 0\n");
         for (auto &ticker_yt: rsi_tickers_yt)
         {
             this->tech_ind_rsi_values[ticker_yt.get_ticker()] = ticker_yt.get_closes().get_ts_rsis(rsi_period);
@@ -197,6 +199,8 @@ TechnicalIndicators::TechnicalIndicators(const std::vector<YahooTimeseries> &rsi
 
     if (rsi_sma_tickers_yt.size() > 0)
     {
+        assert(sma_period > 0  && "Window for the rsi must be > 0\n");
+        assert(rsi_period > 0  && "Window for the rsi must be > 0\n");
         for (auto &ticker_yt: rsi_sma_tickers_yt)
         {
             std::string ticker = ticker_yt.get_ticker();

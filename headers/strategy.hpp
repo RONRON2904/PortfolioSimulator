@@ -14,6 +14,8 @@ public:
     const std::map<std::time_t, double> get_strategy_values() const;
     double get_strategy_total_returns() const;
     double get_strategy_extended_internal_return_rate(double tolerance, int max_iterations) const;
+    double get_strategy_total_investments() const;
+    double get_strategy_max_drawdown() const;
     void save_end_portfolio(std::string filename);
 
     const YahooTimeseries montecarlo_simulation(const std::vector<std::time_t> &future_dates);

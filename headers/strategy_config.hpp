@@ -9,6 +9,8 @@
 struct GeneralParameters
 {
     const std::vector<YahooTimeseries> all_tickers_yt;
+    std::time_t start_date;
+    std::time_t end_date;
     std::string strategy_name;
     double starting_amount;
     double monthly_deposit_amount;
@@ -17,6 +19,8 @@ struct GeneralParameters
     bool reinvestment_policy; // for dividends or bond yields
 
     GeneralParameters(const std::vector<YahooTimeseries> &all_tickers_yt,
+                      std::time_t start_date,
+                      std::time_t end_date,
                       std::string strategy_name,
                       double starting_amount,
                       double monthly_deposit_amount,
@@ -37,6 +41,7 @@ struct RecurrentInvestmentParameters
     double rebalancing_threshold = 0.0;
     size_t rebalancing_freq = 0;
     double withdraw_pct = 0.0;
+    double withdraw_amount = 0.0; // withdraw amount
     size_t withdraw_nb_months_frequency = 0; // withdraw every x months
     size_t withdraw_monthly_weeknum = 0; // withdraw on which week of the month 1...4 
     size_t withdraw_week_day = 0;  // withdraw on which week day ?
@@ -53,6 +58,7 @@ struct RecurrentInvestmentParameters
                                   size_t rebalancing_freq,
                                   const std::map<std::string, double> &assets_desired_pct_allocations,
                                   double withdraw_pct,
+                                  double withdraw_amount,
                                   size_t withdraw_nb_months_frequency,
                                   size_t withdraw_monthly_weeknum,
                                   size_t withdraw_week_day);
@@ -64,7 +70,7 @@ struct RecurrentInvestmentParameters
 
 struct RiskParameters
 {
-    const std::vector<YahooTimeseries> &risk_tickers_yt;
+    const std::vector<YahooTimeseries> risk_tickers_yt;
     size_t pct_changes_window = 0;
     double stop_loss_percentage = 0.0;
     double take_profit_percentage = 0.0;
@@ -78,16 +84,13 @@ struct RiskParameters
 
 struct TechnicalIndicators
 {
-    const std::vector<YahooTimeseries> &rsi_tickers_yt;
-    const std::vector<YahooTimeseries> &sma_tickers_yt;
-    const std::vector<YahooTimeseries> &rsi_sma_tickers_yt; // for applying both rsi & sma conditions before buying / selling an asset
+    const std::vector<YahooTimeseries> rsi_tickers_yt;
+    const std::vector<YahooTimeseries> sma_tickers_yt;
+    const std::vector<YahooTimeseries> rsi_sma_tickers_yt; // for applying both rsi & sma conditions before buying / selling an asset
     size_t rsi_period = 0;
     size_t sma_period = 0;
     double rsi_buy_threshold = 0.0;
     double rsi_sell_threshold = 0.0;
-    double rsi_starting_amount = 0.0;
-    double sma_starting_amount = 0.0;
-    double rsi_sma_starting_amount = 0.0;
 
     TechnicalIndicators();
     TechnicalIndicators(const std::vector<YahooTimeseries> &rsi_tickers_yt,
@@ -96,10 +99,7 @@ struct TechnicalIndicators
                         size_t rsi_period,
                         size_t sma_period,
                         double rsi_buy_threshold,
-                        double rsi_sell_threshold,
-                        double rsi_starting_amount,
-                        double sma_starting_amount,
-                        double rsi_sma_starting_amount);
+                        double rsi_sell_threshold);
 
     std::map<std::string, std::map<time_t, double>> tech_ind_sma_values;
     std::map<std::string, std::map<time_t, double>> tech_ind_rsi_values;

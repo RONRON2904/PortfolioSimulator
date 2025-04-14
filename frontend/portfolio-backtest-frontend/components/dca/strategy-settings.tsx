@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
+import Checkbox from "@/components/ui/checkbox";
 import { Trash, Copy, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function StrategySettings({ strategies, setStrategies }) {
   const [showRecurring, setShowRecurring] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const [showOthers, setShowOthers] = useState(false);
+  const [showTechinds, setShowTechinds] = useState(false);
 
   const updateSettings = (strategyIndex, field, value) => {
     setStrategies((prevStrategies) => {
@@ -34,7 +35,7 @@ export default function StrategySettings({ strategies, setStrategies }) {
           className="relative transition-all duration-300 ease-in-out border rounded-lg p-4 bg-white shadow-md"
           style={{
             width: `calc(100% / ${Math.min(strategies.length, 2)})`,
-            minWidth: "400px",
+            minWidth: "600px",
           }}
         >
           <button
@@ -110,6 +111,16 @@ export default function StrategySettings({ strategies, setStrategies }) {
                   />
                 </div>
                 <div className="flex items-center gap-4">
+                  <label className="w-1/3">Withdrawal Annual Amount</label>
+                  <Input
+                    type="number"
+                    value={strategy.rinvWithdrawalAmount}
+                    onChange={(e) => updateSettings(index, "rinvWithdrawalAmount", e.target.value)}
+                    className="flex-1 border rounded p-2"
+                    placeholder="Enter x >= 0" 
+                  />
+                </div>
+                <div className="flex items-center gap-4">
                   <label className="w-1/3">Withdraw every x Month</label>
                   <Input
                     type="number"
@@ -180,69 +191,112 @@ export default function StrategySettings({ strategies, setStrategies }) {
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="w-1/3">Withdrawal Annual %</label>
+                  <label className="w-1/3">On which week number of the month?</label>
                   <Input
                     type="number"
-                    value={strategy.rinvWithdrawalPct}
-                    onChange={(e) => updateSettings(index, "rinvWithdrawalPct", e.target.value)}
+                    value={strategy.rinvInvestmentMonthlyWeekNum}
+                    onChange={(e) => updateSettings(index, "rinvInvestmentMonthlyWeekNum", e.target.value)}
                     className="flex-1 border rounded p-2"
+                    placeholder="0-4" 
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="w-1/3">Withdraw every x months:</label>
+                  <label className="w-1/3">On which week day?</label>
                   <Input
                     type="number"
-                    value={strategy.rinvWithdrawalNbMonthsFrequency}
-                    onChange={(e) => updateSettings(index, "rinvWithdrawalNbMonthsFrequency", e.target.value)}
+                    value={strategy.rinvInvestmentWeekDay}
+                    onChange={(e) => updateSettings(index, "rinvInvestmentWeekDay", e.target.value)}
                     className="flex-1 border rounded p-2"
+                    placeholder="1-5" 
                   />
                 </div>
               </div>
             )}
-
-            {/* Toggle button for others params */}
+            {/* Toggle button for technical indicators investments */}
             <button
-              onClick={() => setShowOthers(!showOthers)}
+              onClick={() => setShowTechinds(!showTechinds)}
               className="w-full text-left text-blue-500 font-semibold flex items-center gap-2 mt-4"
             >
-              {showOthers ? <ChevronUp size={16} /> : <ChevronDown size={16} />} Change parameters : Flat tax=0%, Reinvest Dividends=Yes, Fees Per Trade=0$
+              {showTechinds ? <ChevronUp size={16} /> : <ChevronDown size={16} />} Add Technical Indicators
             </button>
             
-            {showOthers && (
+            {showTechinds && (
               <div className="space-y-4 border p-4 rounded-lg bg-gray-100">
                 <div className="flex items-center gap-4">
-                  <label className="w-1/3">Reinvest Dividends?:</label>
+                  <label className="w-1/3">SMA window period</label>
                   <Input
-                    type="text"
-                    value={strategy.reinvestmentPolicy}
-                    onChange={(e) => updateSettings(index, "reinvestmentPolicy", e.target.value)}
+                    type="number"
+                    value={strategy.techindSmaWindow}
+                    onChange={(e) => updateSettings(index, "techindSmaWindow", e.target.value)}
                     className="flex-1 border rounded p-2"
-                    placeholder="true / false"
+                    placeholder="Enter x > 0" 
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="w-1/3">Flat Tax</label>
+                  <label className="w-1/3">RSI window period</label>
                   <Input
                     type="number"
-                    value={strategy.tax}
-                    onChange={(e) => updateSettings(index, "tax", e.target.value)}
+                    value={strategy.techindRsiWindow}
+                    onChange={(e) => updateSettings(index, "techindRsiWindow", e.target.value)}
                     className="flex-1 border rounded p-2"
-                    placeholder="Ex: flat tax 0.3" 
+                    placeholder="Enter x > 0" 
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <label className="w-1/3">Fees per trade</label>
+                  <label className="w-1/3">RSI buy threshold</label>
                   <Input
                     type="number"
-                    value={strategy.tradeFees}
-                    onChange={(e) => updateSettings(index, "tradeFees", e.target.value)}
+                    value={strategy.techindRsiBuyThreshold}
+                    onChange={(e) => updateSettings(index, "techindRsiBuyThreshold", e.target.value)}
                     className="flex-1 border rounded p-2"
-                    placeholder="Enter x >= 0" 
+                    placeholder="0-4" 
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="w-1/3">RSI sell threshold</label>
+                  <Input
+                    type="number"
+                    value={strategy.techindRsiSellThreshold}
+                    onChange={(e) => updateSettings(index, "techindRsiSellThreshold", e.target.value)}
+                    className="flex-1 border rounded p-2"
+                    placeholder="1-5" 
                   />
                 </div>
               </div>
             )}
-
+          
+            <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm">Reinvest Dividends?</label>
+                <Checkbox
+                  checked={strategy.reinvestmentPolicy}
+                  onChange={(checked) => updateSettings(index, "reinvestmentPolicy", checked)}
+                />
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <label className="text-sm">Flat Tax</label>
+                <Input
+                  type="number"
+                  value={strategy.tax}
+                  onChange={(e) => updateSettings(index, "tax", e.target.value)}
+                  className="w-20 border rounded p-1"
+                  placeholder="0.3"
+                />
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <label className="text-sm">Fees per trade</label>
+                <Input
+                  type="number"
+                  value={strategy.tradeFees}
+                  onChange={(e) => updateSettings(index, "tradeFees", e.target.value)}
+                  className="w-20 border rounded p-1"
+                  placeholder="≥ 0"
+                />
+              </div>
+            </div>
+            
           </div>
         </div>
       ))}

@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <nlohmann/json.hpp>
 #include "../headers/strategy_config.hpp"
 
 class UserInputHandler {
 
 public:
     UserInputHandler(int argc, char* argv[]);
+    UserInputHandler(nlohmann::json inputs);
     std::vector<struct GeneralParameters> get_general_parameters();
     std::vector<struct RecurrentInvestmentParameters> get_rinv_parameters();
     std::vector<struct RiskParameters> get_risk_parameters();

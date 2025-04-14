@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://developers.google.com/
+HostUrl=https://objects.githubusercontent.com/github-production-release-asset-2e65be/31102092/b2878c2a-8aed-41e2-a33d-dbc09fc210f1?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250413%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250413T180936Z&X-Amz-Expires=300&X-Amz-Signature=45357b7e413a075c3a7e7a7b75f06e6cd683185fca96a56ca1e99af41b05b76f&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dor-tools_amd64_ubuntu-24.04_cpp_v9.10.4067.tar.gz&response-content-type=application%2Foctet-stream

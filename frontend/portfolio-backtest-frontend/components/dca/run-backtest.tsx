@@ -18,9 +18,14 @@ export const handleRunBacktest = async (strategies, setResults, setShowGraph) =>
         rinvRebalancingThreshold: strategies.map(s => parseFloat(s.rinvRebalancingThreshold) || 0),
         rinvRebalancingFreqMinNbDays: strategies.map(s => parseInt(s.rinvRebalancingFreqMinNbDays) || 0),
         rinvWithdrawalPct: strategies.map(s => parseFloat(s.rinvWithdrawalPct) || 0),
+        rinvWithdrawalAmount: strategies.map(s => parseFloat(s.rinvWithdrawalAmount) || 0),
         rinvWithdrawalNbMonthsFrequency: strategies.map(s => parseInt(s.rinvWithdrawalNbMonthsFrequency) || 0),
         rinvWithdrawalMonthlyWeekNum: strategies.map(s => parseInt(s.rinvWithdrawalMonthlyWeekNum) || 0),
         rinvWithdrawalWeekDay: strategies.map(s => parseInt(s.rinvWithdrawalWeekDay) || 0),
+        techindSmaWindow: strategies.map(s => parseInt(s.techindSmaWindow) || 0),
+        techindRsiWindow: strategies.map(s => parseInt(s.techindRsiWindow) || 0),
+        techindRsiBuyThreshold: strategies.map(s => parseFloat(s.techindRsiBuyThreshold) || 0),
+        techindRsiSellThreshold: strategies.map(s => parseFloat(s.techindRsiSellThreshold) || 0),
         rinvAllocations: strategies.map(s => {
           const formattedAssets = s.assets.reduce((acc, asset) => {
             if (asset.symbol && asset.allocation) {

@@ -48,6 +48,13 @@ void PortfolioBuilder::deposit(double cash_amt, std::time_t date)
     }
 }
 
+void PortfolioBuilder::receive_dividend(double cash_amt, std::time_t date){
+    if (this->historical_cash.empty())
+        this->historical_cash = {{date, cash_amt}};
+    else
+        this->historical_cash[date] = this->historical_cash.rbegin()->second + cash_amt;
+}
+
 void PortfolioBuilder::withdraw(double cash_amt, std::time_t date){
     if (this->get_cash_amount(date) >= cash_amt)
         this->historical_cash[date] = this->historical_cash.rbegin()->second - cash_amt;
@@ -78,7 +85,7 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
             this->portfolio_total_shares[date] = this->portfolio_total_shares.rbegin()->second + shares_amt;
         this->historical_cash[date] = this->historical_cash.rbegin()->second - expense;
     }
-    /*
+    
     else{
         fprintf(stderr, "not enough cash available to buy this volume of shares\n");
         std::cout << unix_timestamp_to_date_string(date) << std::endl;
@@ -86,7 +93,6 @@ void PortfolioBuilder::buy(const YahooTimeseries &ticker_yt, double shares_amt, 
         std::cout << expense << std::endl;
         std::cout << this->get_cash_amount(date) << std::endl;
     }
-    */
 }
 
 void PortfolioBuilder::sell(const YahooTimeseries &ticker_yt, double shares_amt, std::time_t date)
@@ -357,10 +363,11 @@ std::map<std::time_t, double> PortfolioBuilder::get_portfolio_historical_cash() 
 std::map<time_t, std::vector<double>> PortfolioBuilder::get_portfolio_values_and_pls() const {
     std::map<std::time_t, double> ptf_values = this->get_ts_portfolio_values().get_ts_values();
     std::map<std::time_t, double> ptf_pls_ts_values = this->get_portfolio_profits_and_losses().get_ts_values();
+    std::map<std::time_t, double> ptf_ath_pct_change_values = this->get_ts_portfolio_values().get_ts_pct_changes_since_last_max();
     std::map<time_t, std::vector<double>> values_pls;
     for (const auto &pair : ptf_values)
     {
-        values_pls[pair.first] = {ptf_values[pair.first], ptf_pls_ts_values[pair.first]};
+        values_pls[pair.first] = {ptf_values[pair.first], ptf_pls_ts_values[pair.first], ptf_ath_pct_change_values[pair.first]};
     }
     return values_pls;
 }
